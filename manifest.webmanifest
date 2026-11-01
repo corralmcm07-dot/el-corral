@@ -1,0 +1,16 @@
+{
+  "name": "El Corral MCM",
+  "short_name": "El Corral",
+  "description": "Administración de la finca: ganado, ordeño, personal, tareas y cultivos.",
+  "lang": "es",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#062A1B",
+  "theme_color": "#062A1B",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
