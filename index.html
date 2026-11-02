@@ -143,6 +143,13 @@ th.sat{color:var(--gold-ink)}
 .panel{background:var(--surface);width:100%;max-width:560px;max-height:92%;overflow:auto;border-radius:16px 16px 0 0;padding:16px max(16px,env(safe-area-inset-right,0px)) calc(20px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px));border:2px solid var(--line)}
 .panel .top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:12px}
 .x{background:none;border:2px solid var(--line);border-radius:8px;width:40px;height:40px;font-size:20px;line-height:1;flex:none}
+.fotos{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:8px}
+.foto{border:2px solid var(--line);border-radius:8px;background:var(--surface-2);padding:0;overflow:hidden;text-align:left;color:var(--ink);font:inherit}
+.foto img{width:100%;aspect-ratio:1;object-fit:cover;display:block;background:var(--surface-2)}
+.foto img:not([src]){visibility:hidden}
+.foto span{display:block;font-size:12px;padding:4px 6px;line-height:1.25}
+.avs{margin-top:6px;border-left:3px solid var(--line);padding-left:8px}
+.fotoG{width:100%;border-radius:8px;display:block}
 @media (min-width:700px){.sheet{align-items:center}.panel{border-radius:14px;max-height:88%}}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(84px + env(safe-area-inset-bottom,0px));z-index:60;background:var(--ink);color:var(--bg);border-radius:8px;padding:10px 16px;font-weight:700;font-size:15px;max-width:92%;text-align:center}
 .toast.err{background:var(--bad);color:#fff}
@@ -159,6 +166,22 @@ th.sat{color:var(--gold-ink)}
 .login-card{max-width:420px;margin:20px auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 @media (prefers-reduced-motion:reduce){.busy{animation:none;background:var(--gold)}}
 @media (prefers-reduced-motion:no-preference){.sheet{animation:fade .15s ease-out}@keyframes fade{from{opacity:0}to{opacity:1}}}
+
+.cmt{border-top:1px solid var(--line);padding:8px 0;overflow-wrap:anywhere}.cmts>.cmt:first-of-type{border-top:0}
+.foto.mini{display:block;width:96px;margin-top:6px}
+.gen{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
+.gslot{border:2px solid var(--line);border-radius:8px;padding:6px 8px;display:flex;flex-direction:column;align-items:flex-start;gap:4px;background:var(--surface-2);min-width:0}.gslot small{color:var(--muted);font-size:12px}
+.rep{position:fixed;inset:0;z-index:80;background:#fff;color:#111;overflow:auto}
+.rtool{position:sticky;top:0;display:flex;gap:8px;flex-wrap:wrap;align-items:center;padding:10px 14px;background:#f3efe2;border-bottom:2px solid #c9a24a;z-index:2}
+.rpage{max-width:900px;margin:0 auto;padding:18px 16px 40px;font:15px/1.45 Georgia,serif}
+.rhead{display:flex;justify-content:space-between;gap:8px;border-bottom:3px solid #0A2C1F;padding-bottom:6px;margin-bottom:12px;color:#0A2C1F;font-size:18px}
+.rh1{font-size:24px;margin:8px 0 12px;color:#111}.rh2{font-size:18px;margin:18px 0 6px;border-bottom:1px solid #999;color:#0A2C1F}.rpage h3{margin:12px 0 4px;font-size:15px;color:#333}
+.rtw{overflow-x:auto;max-width:100%}
+table.rt{width:100%;border-collapse:collapse;font-size:13.5px}.rt th,.rt td{border:1px solid #bbb;padding:4px 6px;text-align:left;vertical-align:top;overflow-wrap:anywhere}.rt th{background:#eee}.kvt th{width:34%}
+.rgal{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.rgal figure{margin:0;break-inside:avoid}.rgal img{width:100%;aspect-ratio:1;object-fit:cover;display:block}.rgal figcaption{font-size:12px}
+.rfoot{color:#555;font-size:12px;margin-top:24px}
+.rpage{overflow-wrap:anywhere}.rep .gslot{background:#fff;border-color:#bbb}.rep .gslot small{color:#555}.rep .lbl{color:#333}
+@media print{.rtw{overflow:visible}body.repOpen>*:not(#rep){display:none!important}.rep{position:static;overflow:visible}.noprint{display:none!important}.rpage{max-width:none;padding:0}}
 </style>
 </head>
 <body>
@@ -166,6 +189,7 @@ th.sat{color:var(--gold-ink)}
 <div id="root"></div>
 <div class="sheet" id="sheet" hidden><div class="panel" id="panel" role="dialog" aria-modal="true"></div></div>
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<div class="rep" id="rep" hidden></div>
 <script src="config.js"></script>
 <script>
 'use strict';
@@ -175,7 +199,7 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const MES=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
 const WD=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
-const ROL={admin:'Administrador',capataz:'Capataz',mandador:'Mandador',mozo:'Mozo'};
+const ROL={admin:'Administrador',capataz:'Capataz',mandador:'Mandador',mozo:'Mozo',veterinario:'Veterinario',mecanico:'Mecánico'};
 const mem={};
 const store={
   get(k){try{return localStorage.getItem(k)}catch(e){return mem[k]||null}},
@@ -195,36 +219,44 @@ const money=n=>'$'+Number(n||0).toFixed(2);
 const lc=s=>s.charAt(0).toLowerCase()+s.slice(1);
 const cap1=s=>s.charAt(0).toUpperCase()+s.slice(1);
 
-const ICONS={home:'M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',tag:'M3 12l9-9h7a2 2 0 0 1 2 2v7l-9 9zM16 8h.01',cross:'M10 3h4v7h7v4h-7v7h-4v-7H3v-4h7z',drop:'M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z',users:'M16 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM8 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM2 20c0-3 3-5 6-5s6 2 6 5M14 15c3 0 8 1 8 5',check:'M4 4h16v16H4zM8 12l3 3 5-6',leaf:'M5 19C5 10 10 5 20 4c0 10-5 15-14 15zM5 19l8-8',wrench:'M15 4a5 5 0 0 0-4 7l-7 7 2 2 7-7a5 5 0 0 0 7-4l-3 3-3-1-1-3z',bell:'M6 17V11a6 6 0 0 1 12 0v6l2 2H4zM10 21h4',db:'M4 6c0-2 16-2 16 0v12c0 2-16 2-16 0zM4 12c0 2 16 2 16 0',grid:'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',shield:'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z'};
+const ICONS={home:'M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z',tag:'M3 12l9-9h7a2 2 0 0 1 2 2v7l-9 9zM16 8h.01',cross:'M10 3h4v7h7v4h-7v7h-4v-7H3v-4h7z',drop:'M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.5 6-11 6-11z',users:'M16 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM8 12a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM2 20c0-3 3-5 6-5s6 2 6 5M14 15c3 0 8 1 8 5',check:'M4 4h16v16H4zM8 12l3 3 5-6',leaf:'M5 19C5 10 10 5 20 4c0 10-5 15-14 15zM5 19l8-8',wrench:'M15 4a5 5 0 0 0-4 7l-7 7 2 2 7-7a5 5 0 0 0 7-4l-3 3-3-1-1-3z',bell:'M6 17V11a6 6 0 0 1 12 0v6l2 2H4zM10 21h4',db:'M4 6c0-2 16-2 16 0v12c0 2-16 2-16 0zM4 12c0 2 16 2 16 0',grid:'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',shield:'M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z',map:'M9 4L3 6v14l6-2 6 2 6-2V4l-6 2zM9 4v14M15 6v14',truck:'M2 6h11v10H2zM13 9h4l4 4v3h-8zM6 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM17 19a2 2 0 1 0 0-4 2 2 0 0 0 0 4z',cart:'M3 4h3l2 11h11l2-8H7M10 20a1 1 0 1 0 0-2 1 1 0 0 0 0 2zM18 20a1 1 0 1 0 0-2 1 1 0 0 0 0 2z',doc:'M6 3h9l4 4v14H6zM14 3v5h5M9 13h7M9 17h7'};
 const ico=n=>`<svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="${ICONS[n]}"/></svg>`;
 const pill=(t,c)=>`<span class="pill ${c}">${esc(t)}</span>`;
 const LOGO='<svg viewBox="0 0 32 32" width="30" height="30" aria-hidden="true"><g fill="#E9C46A"><rect x="4" y="6" width="4" height="20" rx="1"/><rect x="14" y="6" width="4" height="20" rx="1"/><rect x="24" y="6" width="4" height="20" rx="1"/><rect x="2" y="11" width="28" height="3" rx="1"/><rect x="2" y="19" width="28" height="3" rx="1"/></g></svg>';
 
-const ALL=['admin','capataz','mandador','mozo'],OPS=['admin','capataz','mandador'];
+const ALL=['admin','capataz','mandador','mozo'],OPS=['admin','capataz','mandador'],VETR=['admin','capataz','mandador','veterinario'],TODOSR=['admin','capataz','mandador','mozo','veterinario','mecanico'];
 const MODS=[
- {id:'inicio',name:'Inicio',icon:'home',roles:ALL},
- {id:'ganado',name:'Ganado',icon:'tag',roles:OPS},
- {id:'vet',name:'Veterinaria',icon:'cross',roles:OPS},
+ {id:'inicio',name:'Inicio',icon:'home',roles:TODOSR},
+ {id:'ganado',name:'Ganado',icon:'tag',roles:VETR},
+ {id:'vet',name:'Veterinaria',icon:'cross',roles:VETR},
  {id:'ordeno',name:'Ordeño',icon:'drop',roles:ALL},
  {id:'personal',name:'Personal',icon:'users',roles:OPS},
- {id:'tareas',name:'Tareas y cercos',icon:'check',roles:ALL},
+ {id:'tareas',name:'Tareas',icon:'check',roles:ALL},
+ {id:'parcelas',name:'Parcelas y cercos',icon:'map',roles:OPS},
  {id:'cultivos',name:'Cultivos',icon:'leaf',roles:OPS},
+ {id:'vehiculos',name:'Vehículos',icon:'truck',roles:TODOSR},
  {id:'equipos',name:'Equipos',icon:'wrench',roles:OPS},
- {id:'alertas',name:'Alertas',icon:'bell',roles:ALL},
+ {id:'pedidos',name:'Pedidos',icon:'cart',roles:TODOSR},
+ {id:'reportes',name:'Reportes',icon:'doc',roles:['admin']},
+ {id:'alertas',name:'Alertas',icon:'bell',roles:TODOSR},
  {id:'usuarios',name:'Usuarios y sesiones',icon:'shield',roles:['admin']},
  {id:'respaldos',name:'Copias y registro',icon:'db',roles:['admin']}
 ];
 const modName=m=>m.id==='personal'&&S.user&&S.user.rol==='admin'?'Personal y pagos':m.name;
 
-const TABS_OPS=['Grupos','Animales','Historial','Tratamientos','Visitas','Ordeno','Personal','Jornadas','Tareas','Cultivos','Labores','Equipos'];
+const TABS_VET=['Grupos','Animales','Historial','Tratamientos','Fotos','Avisos','Comentarios','Pedidos','Vehiculos'];
+const TABS_OPS=['Grupos','Animales','Historial','Tratamientos','Fotos','Avisos','Avances','Visitas','Ordeno','Personal','Jornadas','Tareas','Cultivos','Labores','Equipos','Comentarios','Pedidos','Vehiculos','Parcelas','Rutinas','RutinaCheck'];
 const TABS_ADMIN=TABS_OPS.concat(['Tarifas','Bonos']);
-const TABS_MOZO=['Ordeno','Tareas'];
+const TABS_MOZO=['Ordeno','Tareas','Avances','Fotos','Comentarios','Pedidos','Vehiculos','Rutinas','RutinaCheck'];
+const TABS_MEC=['Vehiculos','Comentarios','Pedidos','Fotos'];
+const TABS_FULL=['Fotos','Comentarios','Pedidos'];
 
-const S={token:store.get('corral-token')||'',user:null,view:'inicio',d:{},loaded:0,fg:'todos',q:'',vetTab:'trat',pTab:'jor',tf:'todas',cf:'todos',
+const S={token:store.get('corral-token')||'',user:null,view:'inicio',d:{},loaded:0,fg:'todos',q:'',vetTab:'trat',fc:{},pTab:'jor',tf:'todas',cf:'todos',
   sat:satOf(today()),resumen:null,usuarios:null,resp:null,cambios:null,msg:'',confirm:null,chain:Promise.resolve(),busy:0,sun:true,pend:null};
 const T=n=>S.d[n]||[];
 const isAdmin=()=>!!S.user&&S.user.rol==='admin';
-const canOps=()=>!!S.user&&S.user.rol!=='mozo';
+const isVet=()=>!!S.user&&S.user.rol==='veterinario';
+const canOps=()=>!!S.user&&!['mozo','veterinario','mecanico'].includes(S.user.rol);
 
 /* ───────── Comunicación con el servidor ───────── */
 function setBusy(n){S.busy=Math.max(0,S.busy+n);$('#busy').hidden=S.busy===0}
@@ -256,9 +288,9 @@ function upsert(tabla,fila){
 async function add(tabla,datos){const r=await api('crear',{tabla,datos});upsert(tabla,r.fila);return r.fila}
 async function upd(tabla,id,cambios){const r=await api('actualizar',{tabla,id,cambios});upsert(tabla,r.fila);return r.fila}
 async function cargarTodo(){
-  const tablas=isAdmin()?TABS_ADMIN:canOps()?TABS_OPS:TABS_MOZO;
-  const r=await api('cargar',{tablas,desde:addDays(today(),-70)});
-  S.d=r.datos;tablas.forEach(t=>{if(!S.d[t])S.d[t]=[]});S.loaded=Date.now();
+  const tablas=isAdmin()?TABS_ADMIN:canOps()?TABS_OPS:isVet()?TABS_VET:S.user.rol==='mecanico'?TABS_MEC:TABS_MOZO;
+  const [r,r2]=await Promise.all([api('cargar',{tablas:tablas.filter(t=>!TABS_FULL.includes(t)),desde:addDays(today(),-70)}),api('cargar',{tablas:tablas.filter(t=>TABS_FULL.includes(t))})]);
+  S.d=Object.assign({},r.datos,r2.datos);tablas.forEach(t=>{if(!S.d[t])S.d[t]=[]});S.loaded=Date.now();
 }
 function deviceName(){
   const ua=navigator.userAgent||'';
@@ -268,7 +300,7 @@ function deviceName(){
   return os+' · '+br+app;
 }
 function salirLocal(msg){
-  S.token='';store.del('corral-token');S.user=null;S.d={};S.resumen=null;S.usuarios=null;S.resp=null;S.cambios=null;S.msg=msg||'';S.view='inicio';
+  S.token='';store.del('corral-token');S.user=null;S.d={};S.resumen=null;S.usuarios=null;S.resp=null;S.cambios=null;S.fc={};S.rp=null;S.msg=msg||'';S.view='inicio';
   closeSheet();render();
 }
 async function salir(){
@@ -313,20 +345,29 @@ function covers(t,a){
 }
 const jv=(p,d)=>{const j=T('Jornadas').find(x=>x.personalId===p&&x.fecha===d);return j?j.tipo:''};
 const weekDays=sat=>[-5,-4,-3,-2,-1,0].map(n=>addDays(sat,n));
-const tarifaActual=tipo=>{const l=T('Tarifas').filter(x=>x.tipo===tipo&&x.desde<=today()).sort((a,b)=>a.desde<b.desde?-1:a.desde>b.desde?1:0);return l.length?l[l.length-1]:null};
+const personasDe=t=>{const l=String(t.personas||'').split(',').filter(Boolean);if(!l.length&&t.personalId)l.push(t.personalId);return l};
+const tnames=t=>{const l=personasDe(t);if(!l.length)return 'Sin asignar';if(S.user.rol==='mozo')return l.length>1?`Usted y ${l.length-1} más`:'Usted';return l.map(wname).join(', ')};
+const MADRES=['Vaca','Cabra','Otro'],PADRES=['Toro','Chivito','Novillo','Otro'];
+const parentOpts=(kinds,sel,selfId)=>`<option value="">No registrado en la lista</option>`+T('Animales').filter(a=>a.id!==selfId&&(a.id===sel||(a.activo!==false&&kinds.includes(a.tipo)))).sort((x,y)=>String(x.numero).localeCompare(String(y.numero),'es',{numeric:true})).map(a=>`<option value="${esc(a.id)}"${a.id===sel?' selected':''}>${esc(a.nombre)} #${esc(a.numero)}</option>`).join('');
+const parentFields=(a)=>`<div class="row2"><div class="field"><label for="f-ma">Madre</label><select id="f-ma" name="madreId">${parentOpts(MADRES,a&&a.madreId,a&&a.id)}</select></div><div class="field"><label for="f-pa">Padre</label><select id="f-pa" name="padreId">${parentOpts(PADRES,a&&a.padreId,a&&a.id)}</select></div></div>
+  <div class="row2"><div class="field"><label for="f-mat">Madre (si no está en la lista)</label><input id="f-mat" name="madreTexto" maxlength="80" value="${esc(a&&a.madreTexto)}"></div><div class="field"><label for="f-pat">Padre (si no está en la lista)</label><input id="f-pat" name="padreTexto" maxlength="80" value="${esc(a&&a.padreTexto)}"></div></div>`;
+const parentOf=(id,texto)=>{const p=id?T('Animales').find(x=>x.id===id):null;return p?`<button class="btn sm alt" data-act="animal" data-id="${esc(p.id)}">${esc(p.nombre)} #${esc(p.numero)}</button>`:(texto?esc(texto):'—')};
+const AVL={garrapatas:'Garrapatas',inflamacion:'Inflamación',cojera:'Cojera',herida:'Herida',otro:'Otro problema',emergencia:'Emergencia'};
+const tarifaActual=tipo=>{const l=T('Tarifas').filter(x=>x.tipo===tipo&&!x.personalId&&x.desde<=today()).sort((a,b)=>a.desde<b.desde?-1:a.desde>b.desde?1:0);return l.length?l[l.length-1]:null};
 
 function alertsFor(){
-  const out=[],u=S.user,td=today(),ops=u.rol!=='mozo';
+  const out=[],u=S.user,td=today(),ops=!['mozo','veterinario','mecanico'].includes(u.rol),vt=u.rol==='veterinario';
   const add=(mod,level,text)=>out.push({mod,level,text});
-  if(ops){
-    animals().forEach(a=>{const o=ordInfo(a);if(o&&o.cls!=='ok')add('ordeno',o.cls,`${a.nombre} (#${a.numero}): ${lc(o.txt)}, fecha ${fdate(a.ordenoHasta)}.`)});
+  if(ops)animals().forEach(a=>{const o=ordInfo(a);if(o&&o.cls!=='ok')add('ordeno',o.cls,`${a.nombre} (#${a.numero}): ${lc(o.txt)}, fecha ${fdate(a.ordenoHasta)}.`)});
+  if(ops||vt){
+    T('Avisos').filter(a=>a.estado==='nuevo').forEach(a=>add('vet','bad',`Aviso del ordeño: ${AVL[a.tipo]||a.tipo} en ${a.animal}. Avisó ${a.autor}.`));
     T('Tratamientos').forEach(t=>{const s=tstatus(t);
       if(s==='Vencido')add('vet','bad',`Vencido: ${t.titulo}, ${scopeLabel(t)}. Era para el ${fdate(t.fechaProgramada)}.`);
       if(s==='Pendiente')add('vet','warn',`Hoy toca: ${t.titulo}, ${scopeLabel(t)}.`);
     });
   }
   T('Tareas').filter(t=>t.estado!=='completado').forEach(t=>{
-    if(t.prioridad==='urgente')add('tareas','bad',`Urgente: ${t.titulo}${ops?' ('+wname(t.personalId)+')':''}.`);
+    if(t.prioridad==='urgente')add('tareas','bad',`Urgente: ${t.titulo}${ops?' ('+tnames(t)+')':''}.`);
     else if(t.limite&&t.limite<td)add('tareas','bad',`Tarea vencida: ${t.titulo}.`);
   });
   const m=T('Ordeno').find(e=>e.fecha===td&&e.turno==='M');
@@ -343,39 +384,27 @@ function alertsFor(){
     });
     T('Cultivos').filter(c=>c.activo!==false).forEach(c=>{if(c.proximaFecha&&c.proximaFecha<=addDays(td,7))add('cultivos','warn',`${c.proximaLabor||'Labor'} de ${c.nombre}: ${fdate(c.proximaFecha)}.`)});
   }
+  if(ops||u.rol==='mecanico')T('Vehiculos').filter(v=>v.activo!==false&&v.estado&&v.estado!=='Operativo').forEach(v=>add('vehiculos','bad',`Vehículo fuera de servicio: ${v.nombre} (${v.estado.toLowerCase()}).`));
+  if(ops)T('Pedidos').filter(p=>p.estado==='pendiente').forEach(p=>add('pedidos',p.urgencia==='urgente'?'bad':'warn',`Pedido ${p.urgencia==='urgente'?'urgente ':''}de ${p.creadoPor}: ${p.titulo}.`));
   return out.sort((a,b)=>(a.level==='bad'?0:1)-(b.level==='bad'?0:1));
 }
 
 /* ───────── Pantallas ───────── */
 const V={};
-V.inicio=()=>{
-  const u=S.user,al=alertsFor(),td=today(),mozo=u.rol==='mozo';
-  const m=T('Ordeno').find(e=>e.fecha===td&&e.turno==='M');
-  const rows=[];
-  rows.push(['ordeno','Ordeño de hoy, mañana',m&&m.botellas!=null?`${m.botellas} botellas`:m&&m.estado!=='asignado'?pill('Sin registrar','warn'):m?pill('Asignado','n'):'<span class="muted">Sin turno</span>']);
-  rows.push(['tareas',mozo?'Tus tareas pendientes':'Tareas pendientes',T('Tareas').filter(t=>t.estado!=='completado').length]);
-  if(!mozo){const v=T('Tratamientos').filter(t=>tstatus(t)==='Vencido').length;rows.push(['vet','Tratamientos vencidos',v?pill(v+' vencido'+(v>1?'s':''),'bad'):pill('Al día','ok')])}
-  if(u.rol==='admin')rows.push(['personal','Pago semanal',`Sábado ${fdate(satOf(td))}`]);
-  const fecha=cap1(new Intl.DateTimeFormat('es-SV',{timeZone:TZ,weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date()));
-  const head={admin:'Panorama general',capataz:'Panel del capataz',mandador:'Panel del mandador',mozo:'Tus labores de hoy'}[u.rol];
-  return `<div class="pagehead"><div><h1>${head}</h1><p>${esc(fecha)} · ${esc(u.nombre)}</p></div><button class="btn alt sm" data-act="refresh">Actualizar datos</button></div>
-  <div class="stack"><div class="list today">${rows.map(r=>`<div class="item" data-act="go" data-v="${r[0]}"><div class="item-main">${r[1]}</div><div class="val num">${r[2]}</div></div>`).join('')}</div>
-  <div><h2 style="margin-bottom:8px">Requiere atención</h2>${al.length?`<div class="list">${al.slice(0,5).map(a=>`<button class="item click stripe ${a.level==='bad'?'bad':'warn'}" data-act="go" data-v="${a.mod}"><div class="item-main">${esc(a.text)}</div></button>`).join('')}</div>${al.length>5?`<p class="muted" style="margin:8px 0 0">Y ${al.length-5} más en <a href="#" data-act="go" data-v="alertas" style="color:var(--gold-ink);font-weight:700">Alertas</a>.</p>`:''}`:'<div class="card muted">Nada pendiente por ahora.</div>'}</div></div>`;
-};
 V.mas=()=>`<div class="pagehead"><h1>Todos los módulos</h1></div><div class="grid-m">${MODS.filter(m=>m.roles.includes(S.user.rol)&&m.id!=='inicio').map(m=>`<button data-act="go" data-v="${m.id}">${ico(m.icon)}<span>${esc(modName(m))}</span></button>`).join('')}</div>`;
 
 /* Ganado */
 V.ganado=()=>{
   const l=animals();
-  const chips=[['todos','Todos',l.length],...T('Grupos').filter(g=>g.activo!==false).map(g=>[g.id,g.nombre,l.filter(a=>a.grupoId===g.id).length])];
-  return `<div class="pagehead"><div><h1>Ganado</h1><p>${l.length} animales registrados. Capacidad de referencia: 200.</p></div><button class="btn" data-act="newAnimal">Nuevo animal</button></div>
+  const chips=[['todos','Todos',l.length],...T('Grupos').filter(g=>g.activo!==false).map(g=>[g.id,g.nombre,l.filter(a=>a.grupoId===g.id).length])];if(!isVet())chips.push(['baja','De baja',T('Animales').filter(a=>a.activo===false).length]);
+  return `<div class="pagehead"><div><h1>Ganado</h1><p>${l.length} animales registrados. Capacidad de referencia: 200.</p></div>${isVet()?'':'<button class="btn" data-act="newAnimal">Nuevo animal</button>'}</div>
   <div class="chips">${chips.map(c=>`<button class="${S.fg===c[0]?'on':''}" data-act="fg" data-k="${esc(c[0])}">${esc(c[1])} · ${c[2]}</button>`).join('')}</div>
   <div class="toolbar"><input class="input grow" id="q" type="search" placeholder="Buscar por nombre o número" value="${esc(S.q)}" aria-label="Buscar animal"></div>
   <div class="list" id="glist">${animalRows()}</div>`;
 };
 function animalRows(){
   const q=S.q.trim().toLowerCase();
-  const l=animals().filter(a=>(S.fg==='todos'||a.grupoId===S.fg)&&(!q||(a.nombre+' '+a.numero).toLowerCase().includes(q)));
+  const l=(S.fg==='baja'?T('Animales').filter(a=>a.activo===false):animals()).filter(a=>(S.fg==='todos'||S.fg==='baja'||a.grupoId===S.fg)&&(!q||(a.nombre+' '+a.numero).toLowerCase().includes(q)));
   if(!l.length)return '<div class="item muted">No hay animales con ese filtro.</div>';
   return l.sort((a,b)=>String(a.numero).localeCompare(String(b.numero),'es',{numeric:true})).map(a=>{
     const pend=T('Tratamientos').some(t=>!t.fechaAplicada&&['Vencido','Pendiente'].includes(tstatus(t))&&(t.alcance==='todo'||(t.alcance==='grupo'&&t.objetivo===a.grupoId)||(t.alcance==='animal'&&t.objetivo===a.id)));
@@ -385,30 +414,85 @@ function animalRows(){
 }
 function animalSheet(id){
   const a=T('Animales').find(x=>x.id===id);if(!a){closeSheet();return}
-  const hist=[...T('Historial').filter(h=>h.animalId===a.id).map(h=>({d:h.fecha,t:h.texto,by:h.autor})),
+  const hist=[...T('Historial').filter(h=>h.animalId===a.id).map(h=>({d:h.fecha,t:h.texto,by:h.autor,id:h.id,ts:h.ts})),
     ...T('Tratamientos').filter(t=>t.fechaAplicada&&covers(t,a)).map(t=>({d:t.fechaAplicada,t:`${t.titulo} (${scopeLabel(t)})`,by:t.responsable||t.creadoPor}))].sort((x,y)=>String(y.d).localeCompare(String(x.d)));
-  const o=ordInfo(a);
-  const ord=a.tipo==='Vaca'?`<div class="lbl" style="margin:14px 0 6px">Ordeño</div><div class="card" style="padding:10px 12px"><div class="sub">${a.ordenoDesde?'Ordeña desde el '+fdatey(a.ordenoDesde):'Sin fecha de inicio'} · ${a.ordenoHasta?'reposo el '+fdatey(a.ordenoHasta):'sin fecha de reposo'}</div>${o?`<div style="margin-top:6px">${pill(o.txt,o.cls)}</div>`:''}<button class="btn sm alt" style="margin-top:8px" data-act="ordEdit" data-id="${esc(a.id)}">Cambiar fechas</button></div>`:'';
+  const baja=a.activo===false,o=baja?null:ordInfo(a),vt=isVet(),crias=T('Animales').filter(x=>x.madreId===a.id||x.padreId===a.id);
+  const ord=!vt&&!baja&&a.tipo==='Vaca'?`<div class="lbl" style="margin:14px 0 6px">Ordeño</div><div class="card" style="padding:10px 12px"><div class="sub">${a.ordenoDesde?'Ordeña desde el '+fdatey(a.ordenoDesde):'Sin fecha de inicio'} · ${a.ordenoHasta?'reposo el '+fdatey(a.ordenoHasta):'sin fecha de reposo'}</div>${o?`<div style="margin-top:6px">${pill(o.txt,o.cls)}</div>`:''}<button class="btn sm alt" style="margin-top:8px" data-act="ordEdit" data-id="${esc(a.id)}">Cambiar fechas</button></div>`:'';
   openSheet(sheetTop(`${esc(a.nombre)} · #${esc(a.numero)}`)+`
-  <dl class="kv"><dt>Tipo</dt><dd>${esc(a.tipo)}</dd><dt>Grupo</dt><dd>${esc(gname(a.grupoId))}</dd><dt>Ingreso o nacimiento</dt><dd>${fdatey(a.fechaIngreso)}</dd><dt>En este grupo desde</dt><dd>${fdatey(a.grupoDesde)}</dd></dl>
+  ${baja?`<div class="errbox">De baja el ${fdatey(a.bajaFecha)} · ${esc(a.bajaMotivo||'sin motivo')}${a.bajaNota?'. '+esc(a.bajaNota):''}${!vt?`<div style="margin-top:8px"><button class="btn sm alt" data-act="reactivar" data-id="${esc(a.id)}">Reactivar</button></div>`:''}</div>`:''}
+  <dl class="kv"><dt>Tipo</dt><dd>${esc(a.tipo)}${a.sexo?' · '+(a.sexo==='H'?'Hembra':'Macho'):''}</dd><dt>Grupo</dt><dd>${esc(gname(a.grupoId))}</dd><dt>Ingreso o nacimiento</dt><dd>${fdatey(a.fechaIngreso)}</dd><dt>En este grupo desde</dt><dd>${fdatey(a.grupoDesde)}</dd>${crias.length?`<dt>Crías (${crias.length})</dt><dd style="display:flex;flex-wrap:wrap;gap:6px">${crias.map(c=>`<button class="btn sm alt" data-act="animal" data-id="${esc(c.id)}">${esc(c.nombre)} #${esc(c.numero)}</button>`).join('')}</dd>`:''}</dl>
+  <div class="lbl" style="margin:14px 0 4px">Antecedentes</div>${genHtml(a)}
   ${a.observaciones?`<div class="note" style="margin-top:10px;background:var(--surface-2);border-radius:6px;padding:8px">${esc(a.observaciones)}</div>`:''}
   ${ord}
-  <div class="toolbar" style="margin-top:12px"><button class="btn sm alt" data-act="editAnimal" data-id="${esc(a.id)}">Editar datos</button></div>
+  <div class="toolbar" style="margin-top:12px">${vt?'':`<button class="btn sm alt" data-act="editAnimal" data-id="${esc(a.id)}">Editar datos</button>`}${isAdmin()?`<button class="btn sm" data-act="ficha" data-id="${esc(a.id)}">Generar ficha</button>`:''}</div>
   <div class="lbl" style="margin:14px 0 6px">Historial</div>
-  <div class="list" style="margin-bottom:14px">${hist.map(h=>`<div class="item"><div class="item-main"><div class="t" style="font-weight:500">${esc(h.t)}</div><div class="sub">${fdate(h.d)} · ${esc(h.by||'')}</div></div></div>`).join('')||'<div class="item muted">Sin registros todavía.</div>'}</div>
-  <form data-form="note" data-id="${esc(a.id)}"><div class="field"><label for="f-note">Agregar comentario</label><textarea id="f-note" name="nota" required maxlength="500"></textarea></div><button class="btn" type="submit">Guardar comentario</button></form>
-  <form data-form="regroup" data-id="${esc(a.id)}" style="margin-top:16px;border-top:2px solid var(--line);padding-top:14px"><div class="field"><label for="f-g">Cambiar de grupo</label><select id="f-g" name="grupoId">${opts(T('Grupos').filter(g=>g.activo!==false).map(g=>[g.id,g.nombre]),a.grupoId)}</select><small>Al cambiar de grupo no se le atribuyen los tratamientos anteriores del grupo nuevo.</small></div><button class="btn alt" type="submit">Mover</button></form>
-  <div style="margin-top:16px;border-top:2px solid var(--line);padding-top:14px"><button class="btn sm danger" data-act="baja" data-id="${esc(a.id)}">${S.confirm==='baja:'+a.id?'Confirmar baja':'Dar de baja'}</button><div class="muted" style="font-size:13px;margin-top:6px">Se oculta de las listas y conserva todo su historial.</div></div>`);
+  <div class="list" style="margin-bottom:14px">${hist.map(h=>`<div class="item"><div class="item-main"><div class="t" style="font-weight:500">${esc(h.t)}</div><div class="sub">${fdate(h.d)} · ${esc(h.by||'')}</div></div>${h.id?fixBtn('Historial',h.id,h.by,h.ts):''}</div>`).join('')||'<div class="item muted">Sin registros todavía.</div>'}</div>
+  ${cmtBlock('Animales',a.id,0,'Comentarios con foto')}
+  ${fotosHtml(a)}
+  ${baja?'':`<form data-form="followUp" data-id="${esc(a.id)}" style="margin-top:16px;border-top:2px solid var(--line);padding-top:14px"><div class="lbl" style="margin-bottom:6px">Programar seguimiento</div><div class="row2"><div class="field"><label for="f-fu-d">Fecha</label><input id="f-fu-d" name="fecha" type="date" min="${today()}" required></div><div class="field"><label for="f-fu-t">Qué se revisa</label><input id="f-fu-t" name="titulo" required maxlength="70" placeholder="Ej. Revisar pezuña"></div></div><button class="btn alt" type="submit">Programar seguimiento</button></form>`}
+  ${vt||baja?'':`<form data-form="regroup" data-id="${esc(a.id)}" style="margin-top:16px;border-top:2px solid var(--line);padding-top:14px"><div class="field"><label for="f-g">Cambiar de grupo</label><select id="f-g" name="grupoId">${opts(T('Grupos').filter(g=>g.activo!==false).map(g=>[g.id,g.nombre]),a.grupoId)}</select><small>Al cambiar de grupo no se le atribuyen los tratamientos anteriores del grupo nuevo.</small></div><button class="btn alt" type="submit">Mover</button></form>
+  <div style="margin-top:16px;border-top:2px solid var(--line);padding-top:14px"><button class="btn sm danger" data-act="baja" data-id="${esc(a.id)}">Dar de baja</button><div class="muted" style="font-size:13px;margin-top:6px">Se oculta de las listas y conserva todo su historial. Se anota la fecha, el motivo y un comentario.</div></div>`}`,()=>animalSheet(id));
+}
+
+/* Fotos del animal. La app las reduce antes de enviarlas y el servidor las guarda en una carpeta privada de Drive. */
+function fotosHtml(a){
+  const fs=T('Fotos').filter(f=>f.modulo==='Animales'&&f.refId===a.id).sort((x,y)=>String(y.fecha).localeCompare(String(x.fecha)));
+  return `<div class="lbl" style="margin:14px 0 6px">Fotos</div>
+  <div class="fotos">${fs.map(f=>`<button class="foto" data-act="foto" data-id="${esc(f.id)}" aria-label="Ver foto"><img alt="" data-fid="${esc(f.id)}"${S.fc[f.id]?` src="${S.fc[f.id]}"`:''}><span>${fdate(f.fecha)}${f.descripcion?' · '+esc(f.descripcion):''}</span></button>`).join('')||'<div class="item muted" style="grid-column:1/-1">Sin fotos todavía.</div>'}</div>
+  <div class="field" style="margin-top:10px"><label for="f-fdesc">Descripción de la foto (opcional)</label><input id="f-fdesc" maxlength="100" placeholder="Ej. Herida pata derecha"></div>
+  <label class="btn alt" for="f-file" style="display:inline-block">Tomar o elegir foto</label><input id="f-file" type="file" accept="image/*" data-id="${esc(a.id)}" hidden>`;
+}
+async function getFoto(id){
+  if(S.fc[id])return S.fc[id];
+  const r=await api('fotoVer',{id});S.fc[id]=r.datos;return r.datos;
+}
+function cargarMiniaturas(){lazyFotos()}
+function reducirFoto(file){
+  return new Promise((ok,mal)=>{
+    const url=URL.createObjectURL(file),im=new Image();
+    im.onload=()=>{
+      const k=Math.min(1,1280/Math.max(im.naturalWidth,im.naturalHeight)),c=document.createElement('canvas');
+      c.width=Math.max(1,Math.round(im.naturalWidth*k));c.height=Math.max(1,Math.round(im.naturalHeight*k));
+      c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(url);
+      ok(c.toDataURL('image/jpeg',0.72));
+    };
+    im.onerror=()=>{URL.revokeObjectURL(url);mal({mensaje:'No se pudo leer la foto. Pruebe con otra.'})};
+    im.src=url;
+  });
+}
+function subirFoto(inp){
+  const id=inp.dataset.id,file=inp.files[0],desc=($('#f-fdesc')||{}).value||'';
+  inp.value='';if(!file)return;
+  act(async()=>{
+    const datos=await reducirFoto(file);
+    const r=await api('fotoSubir',{modulo:'Animales',refId:id,descripcion:desc,datos});
+    upsert('Fotos',r.fila);S.fc[r.fila.id]=datos;animalSheet(id);toast('Foto guardada');
+  });
+}
+
+/* Avisos del ordeño: los mozos avisan; el veterinario y el equipo los atienden */
+function avisosCard(){
+  const l=[...T('Avisos')].sort((a,b)=>(a.estado==='nuevo'?0:1)-(b.estado==='nuevo'?0:1)||String(b.fecha).localeCompare(String(a.fecha)));
+  const lista=l.filter(a=>a.estado==='nuevo').concat(l.filter(a=>a.estado!=='nuevo').slice(0,5));
+  if(!lista.length)return '';
+  return `<h2 style="margin:0 0 8px">Avisos del ordeño</h2><div class="list" style="margin-bottom:18px">${lista.map(a=>`<div class="item" style="align-items:flex-start"><div class="item-main"><div class="t">${pill(AVL[a.tipo]||a.tipo,a.estado==='nuevo'?'bad':'n')} ${esc(a.animal)}${a.animalId?` <button class="btn sm alt" data-act="animal" data-id="${esc(a.animalId)}">Ver ficha</button>`:''}</div>
+    <div class="sub">${fdate(a.fecha)}${a.turno?(a.turno==='M'?' · mañana':' · tarde'):''} · avisó ${esc(a.autor)}</div>${a.nota?`<div class="note">${esc(a.nota)}</div>`:''}${a.estado!=='nuevo'?`<div class="sub">Atendido por ${esc(a.atendidoPor||'')} el ${fdate(a.atendidoFecha)}</div>`:''}</div>
+    <div style="display:flex;flex-direction:column;gap:4px">${a.estado==='nuevo'?`<button class="btn sm" data-act="avisoOk" data-id="${esc(a.id)}">Marcar atendido</button>`:''}${fixBtn('Avisos',a.id,a.autor,a.ts)}</div></div>`).join('')}</div>`;
 }
 
 /* Veterinaria */
+function misPedidosVet(){
+  const l=T('Pedidos').filter(p=>['pendiente','aprobado','comprado'].includes(p.estado)&&(isVet()||p.origen==='veterinario'));
+  return l.length?`<h2 style="margin:0 0 8px">Medicamentos y materiales pedidos</h2><div class="list" style="margin-bottom:18px">${l.map(pedItem).join('')}</div>`:'';
+}
 V.vet=()=>{
-  const tabs=`<div class="seg">${[['trat','Tratamientos'],['vis','Visitas']].map(k=>`<button class="${S.vetTab===k[0]?'on':''}" data-act="vtab" data-k="${k[0]}">${k[1]}</button>`).join('')}</div>`;
+  if(isVet())S.vetTab='trat';
+  const tabs=isVet()?'':`<div class="seg">${[['trat','Tratamientos'],['vis','Visitas']].map(k=>`<button class="${S.vetTab===k[0]?'on':''}" data-act="vtab" data-k="${k[0]}">${k[1]}</button>`).join('')}</div>`;
   let body='';
   if(S.vetTab==='trat'){
     const ord={Vencido:0,Pendiente:1,Programado:2,Realizado:3};
     const l=[...T('Tratamientos')].sort((a,b)=>ord[tstatus(a)]-ord[tstatus(b)]||String(a.fechaProgramada).localeCompare(String(b.fechaProgramada)));
-    body=`<div class="list">${l.map(t=>{const s=tstatus(t);return `<div class="item"><div class="item-main"><div class="t">${esc(t.titulo)}${pill(s,TCLS[s])}</div><div class="sub">${esc(scopeLabel(t))} · ${t.fechaAplicada?'Aplicado el '+fdate(t.fechaAplicada):'Para el '+fdate(t.fechaProgramada)} · ${esc(t.responsable||'')}</div>${t.nota?`<div class="note">${esc(t.nota)}</div>`:''}</div>${t.fechaAplicada?'':`<button class="btn sm" data-act="tdone" data-id="${esc(t.id)}">Marcar aplicado</button>`}</div>`}).join('')||'<div class="item muted">No hay tratamientos registrados.</div>'}</div>
+    body=avisosCard()+misPedidosVet()+`<h2 style="margin:0 0 8px">Tratamientos</h2><div class="list">${l.map(t=>{const s=tstatus(t);return `<div class="item"><div class="item-main"><div class="t">${esc(t.titulo)}${pill(s,TCLS[s])}</div><div class="sub">${esc(scopeLabel(t))} · ${t.fechaAplicada?'Aplicado el '+fdate(t.fechaAplicada):'Para el '+fdate(t.fechaProgramada)} · ${esc(t.responsable||'')}</div>${t.nota?`<div class="note">${esc(t.nota)}</div>`:''}</div>${t.fechaAplicada?(canFix(t.responsable,t.aplicadoTs)?`<button class="btn sm alt" data-act="tdeshacer" data-id="${esc(t.id)}">Deshacer (no se aplicó)</button>`:''):`<button class="btn sm" data-act="tdone" data-id="${esc(t.id)}">Marcar aplicado</button>`}</div>`}).join('')||'<div class="item muted">No hay tratamientos registrados.</div>'}</div>
     <p class="muted" style="font-size:14px">Las fechas y los medicamentos los define el veterinario. El sistema no sugiere dosis ni calendarios.</p>`;
   }else{
     const l=[...T('Visitas')].sort((a,b)=>String(b.fecha).localeCompare(String(a.fecha)));
@@ -419,7 +503,7 @@ V.vet=()=>{
       ${isAdmin()&&!v.pagado?`<button class="btn sm alt" data-act="vpaid" data-id="${esc(v.id)}">Marcar pagado</button>`:''}</div>`).join('')||'<div class="item muted">No hay visitas registradas.</div>'}</div>`;
   }
   return `<div class="pagehead"><div><h1>Veterinaria</h1><p>Tratamientos por animal, por grupo o para todo el ganado.</p></div>
-  <button class="btn" data-act="${S.vetTab==='trat'?'newTreat':'newVisit'}">${S.vetTab==='trat'?'Registrar tratamiento':'Registrar visita'}</button></div><div class="toolbar">${tabs}</div>${body}`;
+  <div class="toolbar" style="margin:0"><button class="btn" data-act="${S.vetTab==='trat'?'newTreat':'newVisit'}">${S.vetTab==='trat'?'Registrar tratamiento':'Registrar visita'}</button><button class="btn alt" data-act="newEmerg">Informar emergencia</button><button class="btn alt" data-act="newPedVet">Pedir medicamentos o materiales</button></div></div>${tabs?`<div class="toolbar">${tabs}</div>`:''}${body}`;
 };
 
 /* Ordeño */
@@ -442,14 +526,14 @@ V.ordeno=()=>{
     const quienes=String(e.personal||'').split(',').filter(Boolean).map(wname).join(', ');
     const est=e.estado||'asignado';
     return `<div class="item"><div class="item-main"><div class="t">${wdOf(e.fecha)} ${fdate(e.fecha)} · ${e.turno==='M'?'Mañana':'Tarde'} ${pill(cap1(est),est==='completado'?'ok':est==='asignado'?'n':'warn')}</div>
-    <div class="sub">${esc(quienes)}${e.nota?' · '+esc(e.nota):''}</div></div>
+    <div class="sub">${esc(quienes)}${e.nota?' · '+esc(e.nota):''}</div>${cmtBlock('Ordeno',e.id,2,false)}</div>
     <div style="text-align:right"><div class="num" style="font-weight:700">${e.botellas==null?(est==='asignado'?'—':pill('Sin dato','warn')):e.botellas+' bot.'}</div>
-    ${e.fecha<=td||ops?`<button class="btn sm alt" style="margin-top:4px" data-act="milkEdit" data-id="${esc(e.id)}">${est==='asignado'?'Completar':'Editar'}</button>`:''}</div></div>`;
+    ${(ops||(e.fecha<=td&&e.fecha>=addDays(td,-1)))?`<button class="btn sm alt" style="margin-top:4px" data-act="milkEdit" data-id="${esc(e.id)}">${est==='asignado'?'Completar':'Editar'}</button>`:''}</div></div>`;
   }).join('');
-  return `<div class="pagehead"><div><h1>Ordeño</h1><p>Producción en botellas. Un día sin anotar no cuenta como cero.</p></div>${ops?'<button class="btn" data-act="newShift">Asignar turno</button>':''}</div>
+  return `<div class="pagehead"><div><h1>Ordeño</h1><p>Producción en botellas. Un día sin anotar no cuenta como cero.</p></div><div class="toolbar" style="margin:0"><button class="btn alt" data-act="newAviso">Avisar un problema</button>${ops?'<button class="btn" data-act="newShift">Asignar turno</button>':''}</div></div>
   <div class="stack"><div class="card"><h3>Últimos 7 días, turno de la mañana</h3><div class="bars">${bars}</div>
   <p class="muted" style="margin:10px 0 0;font-size:14px">Promedio de los días con dato: <b class="num">${avg}</b> botellas. La barra punteada es un turno sin dato.</p></div>
-  ${ops?restCard():''}
+  ${rutinasCard()}${ops?restCard():''}
   <div><h2 style="margin-bottom:8px">${ops?'Turnos':'Tus turnos'}</h2><div class="list">${rows||'<div class="item muted">Sin turnos asignados.</div>'}</div></div></div>`;
 };
 function restCard(){
@@ -486,11 +570,12 @@ V.personal=()=>{
       ${r.faltanTarifas.length?`<div class="errbox">Faltan tarifas por configurar. No se puede registrar el pago hasta que estén todas.</div>`:''}
       <div class="list">${r.resumen.map(x=>`<div class="item" style="align-items:flex-start"><div class="item-main"><div class="t">${esc(x.nombre)} ${x.pagado?pill('Pagado','ok'):pill('Pendiente','warn')}</div>
         <div class="sub num">${x.jornadas.D} día${x.jornadas.D===1?'':'s'} completo${x.jornadas.D===1?'':'s'}, ${x.jornadas.M} mañana${x.jornadas.M===1?'':'s'}, ${x.jornadas.T} tarde${x.jornadas.T===1?'':'s'}</div>
-        <div class="sub num">Jornadas ${money(x.subtotal)} · Bonificaciones ${money(x.bonos)}</div></div>
-        <div style="text-align:right"><div class="num" style="font-weight:700;font-size:18px">${money(x.total)}</div><button class="btn sm ${x.pagado?'alt':''}" style="margin-top:4px" data-act="pay" data-p="${esc(x.personalId)}">${S.confirm==='pay:'+x.personalId?(x.pagado?'Confirmar deshacer':'Confirmar pago'):(x.pagado?'Deshacer':'Registrar pago')}</button></div></div>`).join('')||'<div class="item muted">Sin trabajadores.</div>'}</div></div>
-      <div class="stack"><div class="card"><h3>Tarifas por jornada</h3><form data-form="tarifas">
+        <div class="sub num">Jornadas ${money(x.subtotal)} · Bonificaciones ${money(x.bonos)}</div>
+        <div class="sub num">Tarifa: día ${x.tarifas.D==null?'—':money(x.tarifas.D)} · mañana ${x.tarifas.M==null?'—':money(x.tarifas.M)} · tarde ${x.tarifas.T==null?'—':money(x.tarifas.T)}${x.propia.M||x.propia.T||x.propia.D?' · <b>individual</b>':''}</div></div>
+        <div style="text-align:right"><div class="num" style="font-weight:700;font-size:18px">${money(x.total)}</div><button class="btn sm alt" style="margin-top:4px;margin-right:4px" data-act="rateEdit" data-p="${esc(x.personalId)}">Tarifa</button><button class="btn sm ${x.pagado?'alt':''}" style="margin-top:4px" data-act="pay" data-p="${esc(x.personalId)}">${S.confirm==='pay:'+x.personalId?(x.pagado?'Confirmar deshacer':'Confirmar pago'):(x.pagado?'Deshacer':'Registrar pago')}</button></div></div>`).join('')||'<div class="item muted">Sin trabajadores.</div>'}</div></div>
+      <div class="stack"><div class="card"><h3>Tarifas generales por jornada</h3><form data-form="tarifas">
         <div class="row2"><div class="field"><label for="r-M">Mañana</label><input id="r-M" name="M" type="number" min="0" step="0.5" value="${(tarifaActual('M')||{}).valor??''}" required></div><div class="field"><label for="r-T">Tarde</label><input id="r-T" name="T" type="number" min="0" step="0.5" value="${(tarifaActual('T')||{}).valor??''}" required></div></div>
-        <div class="field"><label for="r-D">Día completo</label><input id="r-D" name="D" type="number" min="0" step="0.5" value="${(tarifaActual('D')||{}).valor??''}" required><small>Cada tipo tiene su valor. Un cambio rige desde hoy y las semanas ya pagadas no se alteran.</small></div>
+        <div class="field"><label for="r-D">Día completo</label><input id="r-D" name="D" type="number" min="0" step="0.5" value="${(tarifaActual('D')||{}).valor??''}" required><small>Valen para quien no tenga tarifa propia. Para cambiar la de una persona use su botón Tarifa. Un cambio rige desde hoy y las semanas ya pagadas no se alteran.</small></div>
         <button class="btn sm" type="submit">Guardar tarifas</button></form></div>
       <div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;gap:8px"><h3 style="margin:0">Bonificaciones de la semana</h3><button class="btn sm" data-act="newBonus">Agregar</button></div>
         ${bon.map(b=>`<div class="sub" style="padding:6px 0;border-top:1px solid var(--line)"><b class="num">${money(b.monto)}</b> · ${esc(wname(b.personalId))} · ${fdate(b.fecha)}<br>${esc(b.motivo)}</div>`).join('')||'<div class="muted" style="font-size:14px">Ninguna esta semana.</div>'}</div></div></div>`;
@@ -509,14 +594,21 @@ V.tareas=()=>{
   l.sort((a,b)=>(a.estado==='completado')-(b.estado==='completado')||(po[a.prioridad]??2)-(po[b.prioridad]??2)||String(a.fecha).localeCompare(String(b.fecha)));
   const pc={urgente:'bad',alta:'warn',normal:'n'};
   const nextSat=satOf(addDays(today(),1));
-  return `<div class="pagehead"><div><h1>Tareas y cercos</h1><p>${ops?'Asignación, seguimiento y reparaciones.':'Las tareas que le asignaron.'}</p></div>${ops?'<button class="btn" data-act="newTask">Nueva tarea</button>':''}</div>
+  const est=t=>t.estado==='parcial'?pill('En curso','warn'):pill(cap1(t.estado||'pendiente'),t.estado==='completado'?'ok':'n');
+  const item=t=>{
+    const avs=T('Avances').filter(a=>a.tareaId===t.id).sort((x,y)=>String(x.fecha).localeCompare(String(y.fecha)));
+    const fin=t.limite||(t.inicio&&t.dias?addDays(t.inicio,t.dias-1):'');
+    const per=t.dias?`<div class="sub">Estimado: ${t.dias} día${+t.dias===1?'':'s'}${t.inicio?` (${fdate(t.inicio)} al ${fdate(fin)})`:''}${t.estado!=='completado'&&t.inicio&&t.inicio<=today()?` · hoy es el día ${dayDiff(t.inicio,today())+1}`:''}</div>`:'';
+    return `<div class="item" style="align-items:flex-start"><div class="item-main"><div class="t">${esc(t.titulo)} ${pill(cap1(t.prioridad||'normal'),pc[t.prioridad]||'n')} ${est(t)}</div>
+    <div class="sub">${esc(t.categoria||'')}${t.parcela?' · '+esc(t.parcela):''} · ${esc(tnames(t))} · ${fdate(t.inicio||t.fecha)}${!t.dias&&t.limite?' · límite '+fdate(t.limite):''}</div>${per}${t.notas?`<div class="note">${esc(t.notas)}</div>`:''}${t.problema?`<div class="prob">Problema reportado: ${esc(t.problema)}</div>`:''}
+    ${avs.length?`<div class="avs">${avs.map(a=>`<div class="sub"><b>${fdate(a.fecha)}</b> · ${esc(a.autor)}${a.tipo==='final'?' · terminó la labor':''}${a.texto?': '+esc(a.texto):''} ${a.tipo!=='correccion'?fixBtn('Avances',a.id,a.autor,a.ts):''}</div>`).join('')}</div>`:''}${cmtBlock('Tareas',t.id,2,false)}${t.estado==='completado'&&canFix(t.completadoPor,t.completadoTs)?`<button class="btn sm alt" style="margin-top:6px" data-act="reabrir" data-id="${esc(t.id)}">Reabrir (no se terminó)</button>`:''}</div>
+    ${t.estado!=='completado'?`<div style="display:flex;flex-direction:column;gap:4px"><button class="btn sm" data-act="avance" data-id="${esc(t.id)}">Informar avance</button><button class="btn sm alt" data-act="taskDone" data-id="${esc(t.id)}">Completar</button><button class="btn sm alt" data-act="problem" data-id="${esc(t.id)}">Reportar problema</button>${ops?`<button class="btn sm alt" data-act="editTask" data-id="${esc(t.id)}">Editar</button>`:''}</div>`:''}</div>`;
+  };
+  return `<div class="pagehead"><div><h1>Tareas</h1><p>${ops?'Asignación, seguimiento y reparaciones.':'Las tareas que le asignaron.'}</p></div>${ops?'<button class="btn" data-act="newTask">Nueva tarea</button>':''}</div>
   <div class="chips">${[['todas','Todas'],['pendientes','Pendientes'],['completadas','Completadas']].map(c=>`<button class="${S.tf===c[0]?'on':''}" data-act="tf" data-k="${c[0]}">${c[1]}</button>`).join('')}</div>
-  <div class="list">${l.map(t=>`<div class="item" style="align-items:flex-start"><div class="item-main"><div class="t">${esc(t.titulo)} ${pill(cap1(t.prioridad||'normal'),pc[t.prioridad]||'n')} ${pill(cap1(t.estado||'pendiente'),t.estado==='completado'?'ok':'n')}</div>
-    <div class="sub">${esc(t.categoria||'')}${ops?' · '+esc(wname(t.personalId)):''} · ${fdate(t.fecha)}${t.limite?' · límite '+fdate(t.limite):''}</div>${t.notas?`<div class="note">${esc(t.notas)}</div>`:''}${t.problema?`<div class="prob">Problema reportado: ${esc(t.problema)}</div>`:''}</div>
-    ${t.estado!=='completado'?`<div style="display:flex;flex-direction:column;gap:4px"><button class="btn sm" data-act="taskDone" data-id="${esc(t.id)}">Completar</button><button class="btn sm alt" data-act="problem" data-id="${esc(t.id)}">Reportar problema</button>${ops?`<button class="btn sm alt" data-act="editTask" data-id="${esc(t.id)}">Editar</button>`:''}</div>`:''}</div>`).join('')||'<div class="item muted">No hay tareas con ese filtro.</div>'}</div>
+  <div class="list">${l.map(item).join('')||'<div class="item muted">No hay tareas con ese filtro.</div>'}</div>
   ${ops?`<div class="card" style="margin-top:16px;display:flex;gap:12px;justify-content:space-between;align-items:center;flex-wrap:wrap"><div><b>Revisión periódica de cercos</b><div class="muted" style="font-size:14px">Sugerida para el sábado ${fdate(nextSat)}.</div></div><button class="btn sm alt" data-act="fenceTask">Crear tarea de revisión</button></div>`:''}`;
 };
-
 /* Cultivos */
 V.cultivos=()=>{
   const l=T('Cultivos').filter(c=>c.activo!==false&&(S.cf==='todos'||c.tipo===S.cf));
@@ -539,7 +631,7 @@ V.equipos=()=>`<div class="pagehead"><div><h1>Equipos e instalaciones</h1><p>Est
 /* Alertas */
 V.alertas=()=>{
   const al=alertsFor();
-  return `<div class="pagehead"><div><h1>Alertas</h1><p>${S.user.rol==='admin'?'Todo el panorama de la finca.':S.user.rol==='mozo'?'Avisos de sus labores.':'Avisos operativos.'}</p></div></div>
+  return `<div class="pagehead"><div><h1>Alertas</h1><p>${S.user.rol==='admin'?'Todo el panorama de la finca.':S.user.rol==='mozo'?'Avisos de sus labores.':S.user.rol==='veterinario'?'Tratamientos por aplicar y vencidos.':'Avisos operativos.'}</p></div></div>
   <div class="list">${al.map(a=>`<button class="item click stripe ${a.level==='bad'?'bad':'warn'}" data-act="go" data-v="${a.mod}"><div class="item-main">${esc(a.text)}<div class="sub">${esc((MODS.find(m=>m.id===a.mod)||{}).name||'')}</div></div></button>`).join('')||'<div class="item muted">No hay alertas.</div>'}</div>
   <p class="muted" style="font-size:14px;margin-top:12px">Los avisos al teléfono llegarán en la siguiente etapa. Por ahora las alertas se ven dentro de la app.</p>`;
 };
@@ -581,7 +673,7 @@ function shellHtml(){
   const n=alertsFor().length;
   const bdg=id=>id==='alertas'&&n?`<b class="badge">${n}</b>`:'';
   const side=mods.map(m=>`<button class="side-i ${S.view===m.id?'on':''}" data-act="go" data-v="${m.id}">${ico(m.icon)}<span>${esc(modName(m))}</span>${bdg(m.id)}</button>`).join('');
-  const prim=(u.rol==='mozo'?['inicio','ordeno','tareas','alertas']:['inicio','ganado','ordeno','alertas']).map(id=>mods.find(m=>m.id===id)).filter(Boolean);
+  const prim=(u.rol==='mozo'?['inicio','ordeno','tareas','alertas']:u.rol==='veterinario'?['inicio','ganado','vet','alertas']:u.rol==='mecanico'?['inicio','vehiculos','pedidos','alertas']:['inicio','ganado','ordeno','alertas']).map(id=>mods.find(m=>m.id===id)).filter(Boolean);
   const tb=prim.slice();
   if(mods.length>prim.length)tb.push({id:'mas',name:'Más',icon:'grid'});
   const tabbar=tb.map(m=>`<button class="${S.view===m.id||(m.id==='mas'&&!prim.some(p=>p.id===S.view))?'on':''}" data-act="go" data-v="${m.id}">${ico(m.icon)}<span>${esc(modName(m))}</span>${bdg(m.id)}</button>`).join('');
@@ -613,7 +705,7 @@ function pwdHtml(){
 }
 function render(){
   const y=window.scrollY,root=$('#root');
-  root.innerHTML=!S.user?loginHtml():S.user.debeCambiar?pwdHtml():shellHtml();
+  root.innerHTML=!S.user?loginHtml():S.user.debeCambiar?pwdHtml():shellHtml();if(S.user&&!S.user.debeCambiar)lazyFotos();
   if(S.user&&!S.user.debeCambiar){window.scrollTo(0,y)}
 }
 function applySun(on){
@@ -637,8 +729,8 @@ const refresh=()=>act(async()=>{await cargarTodo();if(S.view==='usuarios')await 
 /* ───────── Hojas y formularios ───────── */
 const opts=(arr,sel)=>arr.map(o=>`<option value="${esc(o[0])}" ${String(o[0])===String(sel)?'selected':''}>${esc(o[1])}</option>`).join('');
 const workerOpts=(sel,vacio)=>(vacio?`<option value="">${vacio}</option>`:'')+opts(workers().map(w=>[w.id,w.nombre]),sel);
-function openSheet(html){$('#panel').innerHTML=html;$('#sheet').hidden=false}
-function closeSheet(){$('#sheet').hidden=true;$('#panel').innerHTML=''}
+function openSheet(html,fn){if(fn)S.sheetFn=fn;$('#panel').innerHTML=html;$('#sheet').hidden=false;lazyFotos()}
+function closeSheet(){$('#sheet').hidden=true;$('#panel').innerHTML='';S.sheetFn=null}
 const sheetTop=t=>`<div class="top"><h2>${t}</h2><button class="x" data-act="close" aria-label="Cerrar">×</button></div>`;
 const formWrap=(title,name,inner,id,label)=>sheetTop(title)+`<form data-form="${name}" ${id?`data-id="${esc(id)}"`:''}>${inner}<button class="btn" type="submit">${label||'Guardar'}</button></form>`;
 let toastT;
@@ -666,10 +758,14 @@ const FORMS={
     S.user.debeCambiar=false;await cargarTodo();S.view='inicio';render();toast('Clave guardada');
   },
   async newAnimal(d){
-    const a=await add('Animales',{numero:d.numero,nombre:d.nombre||('Animal '+d.numero),tipo:d.tipo,grupoId:d.grupoId,fechaIngreso:d.fechaIngreso||'',grupoDesde:today(),ordenoDesde:d.ordenoDesde||'',ordenoHasta:d.ordenoHasta||'',observaciones:d.observaciones||'',activo:true});
+    const a=await add('Animales',{...(d.sexo?{sexo:d.sexo}:{}),madreId:d.madreId||'',padreId:d.padreId||'',madreTexto:d.madreId?'':(d.madreTexto||''),padreTexto:d.padreId?'':(d.padreTexto||''),numero:d.numero,nombre:d.nombre||('Animal '+d.numero),tipo:d.tipo,grupoId:d.grupoId,fechaIngreso:d.fechaIngreso||'',grupoDesde:today(),ordenoDesde:d.ordenoDesde||'',ordenoHasta:d.ordenoHasta||'',observaciones:d.observaciones||'',activo:true});
     await hist(a.id,'Registrado en el sistema');closeSheet();render();toast('Animal registrado');
   },
-  async editAnimal(d,f){await upd('Animales',f.dataset.id,{numero:d.numero,nombre:d.nombre,tipo:d.tipo,fechaIngreso:d.fechaIngreso||'',observaciones:d.observaciones||''});render();animalSheet(f.dataset.id);toast('Datos guardados')},
+  async editAnimal(d,f){await upd('Animales',f.dataset.id,{...(d.sexo?{sexo:d.sexo}:{}),numero:d.numero,nombre:d.nombre,tipo:d.tipo,fechaIngreso:d.fechaIngreso||'',observaciones:d.observaciones||'',madreId:d.madreId||'',padreId:d.padreId||'',madreTexto:d.madreId?'':(d.madreTexto||''),padreTexto:d.padreId?'':(d.padreTexto||'')});render();animalSheet(f.dataset.id);toast('Datos guardados')},
+  async followUp(d,f){
+    await add('Tratamientos',{titulo:'Seguimiento: '+d.titulo,alcance:'animal',objetivo:f.dataset.id,fechaProgramada:d.fecha,fechaAplicada:'',responsable:S.user.nombre,nota:''});
+    render();animalSheet(f.dataset.id);toast('Seguimiento programado');
+  },
   async note(d,f){await hist(f.dataset.id,d.nota);render();animalSheet(f.dataset.id);toast('Comentario guardado')},
   async regroup(d,f){
     const a=T('Animales').find(x=>x.id===f.dataset.id);
@@ -712,8 +808,43 @@ const FORMS={
     toast('Tarifas guardadas');await loadResumen();
   },
   async newWorker(d){await add('Personal',{nombre:d.nombre,usuarioId:'',activo:true});closeSheet();render();toast('Trabajador agregado')},
-  async newTask(d){await add('Tareas',{titulo:d.titulo,categoria:d.categoria,fecha:d.fecha,limite:d.limite||'',personalId:d.personalId||'',prioridad:d.prioridad,estado:d.personalId?'asignado':'pendiente',notas:d.notas||''});closeSheet();render();toast('Tarea asignada')},
-  async editTask(d,f){await upd('Tareas',f.dataset.id,{personalId:d.personalId||'',prioridad:d.prioridad,limite:d.limite||'',estado:d.estado,notas:d.notas||''});closeSheet();render();toast('Tarea actualizada')},
+  async newTask(d,f){
+    const who=new FormData(f).getAll('who'),dias=d.dias?Math.max(1,Math.min(90,Math.round(Number(d.dias)))):0;
+    await add('Tareas',{titulo:d.titulo,categoria:d.categoria,parcela:d.parcela||'',fecha:d.fecha,inicio:d.fecha,dias:dias||'',limite:dias?addDays(d.fecha,dias-1):'',personalId:who[0]||'',personas:who.join(','),prioridad:d.prioridad,estado:who.length?'asignado':'pendiente',notas:d.notas||''});
+    closeSheet();render();toast('Tarea asignada');
+  },
+  async avance(d,f){
+    const final=d.fin==='1';
+    if(!final&&!String(d.texto||'').trim())throw {mensaje:'Cuente qué se hizo hoy.'};
+    const r=await api('avanceRegistrar',{tareaId:f.dataset.id,texto:d.texto||'',final});
+    upsert('Avances',r.fila);upsert('Tareas',r.tarea);closeSheet();render();toast(final?'Labor terminada':'Avance guardado');
+  },
+  async aviso(d){
+    await api('avisoCrear',{tipo:d.tipo,animal:d.animal,nota:d.nota||'',turno:d.turno});
+    closeSheet();toast('Aviso enviado al veterinario y al mandador');
+  },
+  async rate(d,f){
+    const pid=f.dataset.id,x=((S.resumen||{}).resumen||[]).find(r=>r.personalId===pid);if(!x)throw {mensaje:'Actualice la pantalla e intente de nuevo.'};
+    for(const tipo of ['M','T','D']){
+      const raw=String(d[tipo]??'').trim();
+      const mias=T('Tarifas').filter(r=>r.personalId===pid&&r.tipo===tipo&&r.desde<=today()).sort((a,b)=>a.desde<b.desde?-1:1),cur=mias[mias.length-1];
+      const propia=!!cur&&cur.valor!==''&&cur.valor!=null;
+      if(raw===''){
+        if(!propia)continue;
+        if(cur.desde===today())await upd('Tarifas',cur.id,{valor:''});else await add('Tarifas',{tipo,valor:'',desde:today(),personalId:pid});
+        continue;
+      }
+      const v=Number(raw);if(!isFinite(v)||v<0)throw {mensaje:'Escriba tarifas válidas.'};
+      if(propia&&cur.valor===v)continue;
+      if(cur&&cur.desde===today())await upd('Tarifas',cur.id,{valor:v});else await add('Tarifas',{tipo,valor:v,desde:today(),personalId:pid});
+    }
+    closeSheet();toast('Tarifa individual guardada');await loadResumen();
+  },
+  async editTask(d,f){
+    const who=new FormData(f).getAll('who'),dias=d.dias?Math.max(1,Math.min(90,Math.round(Number(d.dias)))):'';
+    await upd('Tareas',f.dataset.id,{personalId:who[0]||'',personas:who.join(','),parcela:d.parcela||'',dias,prioridad:d.prioridad,limite:d.limite||'',estado:d.estado,notas:d.notas||''});
+    closeSheet();render();toast('Tarea actualizada');
+  },
   async problem(d,f){await upd('Tareas',f.dataset.id,{problema:`${d.texto} (${S.user.nombre}, ${fdate(today())})`});closeSheet();render();toast('Problema reportado')},
   async newCultivo(d){await add('Cultivos',{nombre:d.nombre,variedad:d.variedad||'',tipo:d.tipo,parcela:d.parcela||'',extension:d.extension||'',fechaSiembra:d.fechaSiembra||'',personalId:d.personalId||'',proximaLabor:d.proximaLabor||'',proximaFecha:d.proximaFecha||'',cosecha:'',costos:d.costos||'',ingresos:d.ingresos||'',activo:true});closeSheet();render();toast('Cultivo registrado')},
   async editCultivo(d,f){
@@ -754,15 +885,19 @@ const ACTS={
   ptab:el=>{S.pTab=el.dataset.k;render();if(S.pTab==='pago')loadResumen()},
   wk:el=>{const cur=satOf(today()),n=S.sat=addDays(S.sat,7*Number(el.dataset.n));S.sat=n>cur?cur:n<addDays(cur,-56)?addDays(cur,-56):n;S.resumen=null;render();if(S.pTab==='pago'&&isAdmin())loadResumen()},
   animal:el=>animalSheet(el.dataset.id),
+  foto:el=>act(async()=>{const f=T('Fotos').find(x=>x.id===el.dataset.id);if(!f)return;const src=await getFoto(f.id);openSheet(sheetTop('Foto')+`<img class="fotoG" src="${src}" alt="Foto del animal"><p class="sub" style="margin:8px 0">${fdate(f.fecha)} · ${esc(f.autor||'')}${f.descripcion?' · '+esc(f.descripcion):''}</p><button class="btn alt" data-act="animal" data-id="${esc(f.refId)}">Volver a la ficha</button>`)}),
   newAnimal:()=>openSheet(formWrap('Nuevo animal','newAnimal',`
     <div class="row2"><div class="field"><label for="f-n">Número</label><input id="f-n" name="numero" required maxlength="20"></div><div class="field"><label for="f-name">Nombre</label><input id="f-name" name="nombre" maxlength="60"></div></div>
     <div class="row2"><div class="field"><label for="f-type">Tipo</label><select id="f-type" name="tipo">${opts(['Vaca','Toro','Novillo','Ternero','Chivito','Cabra','Otro'].map(x=>[x,x]))}</select></div><div class="field"><label for="f-g">Grupo</label><select id="f-g" name="grupoId">${opts(T('Grupos').filter(g=>g.activo!==false).map(g=>[g.id,g.nombre]),S.fg!=='todos'?S.fg:(grpOrd()||{}).id)}</select></div></div>
     <div class="field"><label for="f-since">Ingreso o nacimiento</label><input id="f-since" name="fechaIngreso" type="date"><small>Déjelo vacío si no se conoce.</small></div>
     <div class="row2"><div class="field"><label for="f-od">Ordeña desde</label><input id="f-od" name="ordenoDesde" type="date"></div><div class="field"><label for="f-oh">Pasa a reposo el</label><input id="f-oh" name="ordenoHasta" type="date"></div></div>
+    <div class="field"><label for="f-sx">Sexo</label><select id="f-sx" name="sexo"><option value="">No indicar</option><option value="H">Hembra</option><option value="M">Macho</option></select></div>${parentFields(null)}<div id="sugs" class="field"></div>
     <div class="field"><label for="f-obs">Observaciones</label><textarea id="f-obs" name="observaciones" maxlength="500"></textarea></div>`)),
   editAnimal:el=>{const a=T('Animales').find(x=>x.id===el.dataset.id);openSheet(formWrap('Editar '+esc(a.nombre),'editAnimal',`
     <div class="row2"><div class="field"><label for="f-n">Número</label><input id="f-n" name="numero" value="${esc(a.numero)}" required></div><div class="field"><label for="f-name">Nombre</label><input id="f-name" name="nombre" value="${esc(a.nombre)}" required></div></div>
     <div class="row2"><div class="field"><label for="f-type">Tipo</label><select id="f-type" name="tipo">${opts(['Vaca','Toro','Novillo','Ternero','Chivito','Cabra','Otro'].map(x=>[x,x]),a.tipo)}</select></div><div class="field"><label for="f-since">Ingreso o nacimiento</label><input id="f-since" name="fechaIngreso" type="date" value="${esc(a.fechaIngreso)}"></div></div>
+    <div class="field"><label for="f-sx">Sexo</label><select id="f-sx" name="sexo"><option value="">No indicar</option><option value="H" ${a.sexo==='H'?'selected':''}>Hembra</option><option value="M" ${a.sexo==='M'?'selected':''}>Macho</option></select></div>
+    ${parentFields(a)}
     <div class="field"><label for="f-obs">Observaciones</label><textarea id="f-obs" name="observaciones" maxlength="500">${esc(a.observaciones)}</textarea></div>`,a.id))},
   baja:el=>{const k='baja:'+el.dataset.id;if(S.confirm===k){S.confirm=null;act(async()=>{await upd('Animales',el.dataset.id,{activo:false});closeSheet();render();toast('Animal dado de baja')})}else{S.confirm=k;animalSheet(el.dataset.id)}},
   ordEdit:el=>{const a=T('Animales').find(x=>x.id===el.dataset.id);openSheet(formWrap('Ordeño de '+esc(a.nombre),'ordPeriodo',`<div class="row2"><div class="field"><label for="f-od">Ordeña desde</label><input id="f-od" name="ordenoDesde" type="date" value="${esc(a.ordenoDesde)}"></div><div class="field"><label for="f-oh">Pasa a reposo el</label><input id="f-oh" name="ordenoHasta" type="date" value="${esc(a.ordenoHasta)}"></div></div><p class="muted" style="margin:0 0 12px;font-size:14px">Se avisa 15 días antes de la fecha de reposo y cuando ya pasó.</p>`,a.id))},
@@ -806,21 +941,28 @@ const ACTS={
   },
   newBonus:()=>openSheet(formWrap('Agregar bonificación','bonus',`
     <div class="field"><label for="f-w">Trabajador</label><select id="f-w" name="personalId">${workerOpts()}</select></div>
-    <div class="row2"><div class="field"><label for="f-amt">Monto ($)</label><input id="f-amt" name="monto" type="number" min="0" step="0.5" required></div><div class="field"><label for="f-date">Fecha</label><input id="f-date" name="fecha" type="date" value="${S.sat<today()?S.sat:today()}" required></div></div>
+    <div class="row2"><div class="field"><label for="f-amt">Monto ($)</label><input id="f-amt" name="monto" type="number" min="0" step="0.5" required></div><div class="field"><label for="f-date">Fecha</label><input id="f-date" name="fecha" type="date" min="${addDays(S.sat,-5)}" max="${S.sat}" value="${(t=>t>S.sat?S.sat:t<addDays(S.sat,-5)?addDays(S.sat,-5):t)(today())}" required><small>Debe ser de la semana que está viendo (lunes a sábado).</small></div></div>
     <div class="field"><label for="f-why">Motivo</label><textarea id="f-why" name="motivo" required maxlength="300" placeholder="Trabajo realizado"></textarea></div>`)),
   newWorker:()=>openSheet(formWrap('Agregar trabajador sin cuenta','newWorker',`<div class="field"><label for="f-name">Nombre</label><input id="f-name" name="nombre" required maxlength="80"><small>Para quien trabaja en la finca pero no usa la app. Quien sí la use se crea desde Usuarios.</small></div>`)),
   newTask:()=>openSheet(formWrap('Nueva tarea','newTask',`
     <div class="field"><label for="f-title">Descripción</label><input id="f-title" name="titulo" required maxlength="120"></div>
-    <div class="row2"><div class="field"><label for="f-cat">Categoría</label><select id="f-cat" name="categoria">${opts(['Cercos','Instalaciones','Maquinaria','Ordeño','Pastos','Cultivos','Otra'].map(x=>[x,x]))}</select></div><div class="field"><label for="f-who">Responsable</label><select id="f-who" name="personalId">${workerOpts('','Sin asignar')}</select></div></div>
-    <div class="row2"><div class="field"><label for="f-date">Fecha</label><input id="f-date" name="fecha" type="date" value="${today()}" required></div><div class="field"><label for="f-due">Fecha límite</label><input id="f-due" name="limite" type="date"></div></div>
+    <div class="row2"><div class="field"><label for="f-cat">Categoría</label><select id="f-cat" name="categoria">${opts(['Cercos','Instalaciones','Maquinaria','Ordeño','Pastos','Cultivos','Parcela','Otra'].map(x=>[x,x]))}</select></div><div class="field"><label for="f-parc">Parcela o lugar</label><input id="f-parc" name="parcela" maxlength="60" list="dl-parc" placeholder="Opcional"><datalist id="dl-parc">${[...new Set(T('Parcelas').map(p=>p.nombre).concat(T('Cultivos').map(c=>c.parcela)).filter(Boolean))].map(x=>`<option value="${esc(x)}">`).join('')}</datalist></div></div>
+    <div class="field"><label>Personas asignadas</label><div class="checks">${workers().map(w=>`<label for="f-w${esc(w.id)}"><input id="f-w${esc(w.id)}" type="checkbox" name="who" value="${esc(w.id)}">${esc(w.nombre)}</label>`).join('')||'<span class="muted">No hay trabajadores registrados.</span>'}</div><small>Puede elegir varias. Si no elige a nadie, queda sin asignar.</small></div>
+    <div class="row2"><div class="field"><label for="f-date">Empieza el</label><input id="f-date" name="fecha" type="date" value="${today()}" required></div><div class="field"><label for="f-dias">Días estimados</label><input id="f-dias" name="dias" type="number" min="1" max="90" step="1" placeholder="Ej. 3"><small>Si dura varios días.</small></div></div>
     <div class="field"><label for="f-prio">Prioridad</label><select id="f-prio" name="prioridad">${opts([['normal','Normal'],['alta','Alta'],['urgente','Urgente']])}</select></div>
     <div class="field"><label for="f-notes">Comentarios</label><textarea id="f-notes" name="notas" maxlength="500"></textarea></div>`)),
-  editTask:el=>{const t=T('Tareas').find(x=>x.id===el.dataset.id);openSheet(formWrap('Editar tarea','editTask',`
+  editTask:el=>{const t=T('Tareas').find(x=>x.id===el.dataset.id),sel=personasDe(t);openSheet(formWrap('Editar tarea','editTask',`
     <p style="margin:0 0 12px;font-weight:700">${esc(t.titulo)}</p>
-    <div class="row2"><div class="field"><label for="f-who">Responsable</label><select id="f-who" name="personalId">${workerOpts(t.personalId,'Sin asignar')}</select></div><div class="field"><label for="f-prio">Prioridad</label><select id="f-prio" name="prioridad">${opts([['normal','Normal'],['alta','Alta'],['urgente','Urgente']],t.prioridad)}</select></div></div>
-    <div class="row2"><div class="field"><label for="f-due">Fecha límite</label><input id="f-due" name="limite" type="date" value="${esc(t.limite)}"></div><div class="field"><label for="f-st">Estado</label><select id="f-st" name="estado">${opts([['pendiente','Pendiente'],['asignado','Asignado'],['completado','Completado']],t.estado)}</select></div></div>
+    <div class="field"><label>Personas asignadas</label><div class="checks">${workers().map(w=>`<label for="f-w${esc(w.id)}"><input id="f-w${esc(w.id)}" type="checkbox" name="who" value="${esc(w.id)}" ${sel.includes(w.id)?'checked':''}>${esc(w.nombre)}</label>`).join('')||'<span class="muted">No hay trabajadores registrados.</span>'}</div></div>
+    <div class="row2"><div class="field"><label for="f-parc">Parcela o lugar</label><input id="f-parc" name="parcela" maxlength="60" value="${esc(t.parcela)}"></div><div class="field"><label for="f-dias">Días estimados</label><input id="f-dias" name="dias" type="number" min="1" max="90" step="1" value="${t.dias==null?'':t.dias}"></div></div>
+    <div class="row2"><div class="field"><label for="f-prio">Prioridad</label><select id="f-prio" name="prioridad">${opts([['normal','Normal'],['alta','Alta'],['urgente','Urgente']],t.prioridad)}</select></div><div class="field"><label for="f-due">Fecha límite</label><input id="f-due" name="limite" type="date" value="${esc(t.limite)}"></div></div>
+    <div class="field"><label for="f-st">Estado</label><select id="f-st" name="estado">${opts([['pendiente','Pendiente'],['asignado','Asignado'],['parcial','En curso'],['completado','Completado']],t.estado)}</select></div>
     <div class="field"><label for="f-notes">Comentarios</label><textarea id="f-notes" name="notas" maxlength="500">${esc(t.notas)}</textarea></div>`,t.id))},
-  taskDone:el=>act(async()=>{await upd('Tareas',el.dataset.id,{estado:'completado'});render();toast('Tarea completada por '+S.user.nombre)}),
+  taskDone:el=>act(async()=>{const r=await api('avanceRegistrar',{tareaId:el.dataset.id,texto:'',final:true});upsert('Avances',r.fila);upsert('Tareas',r.tarea);render();toast('Tarea completada por '+S.user.nombre)}),
+  avance:el=>{const t=T('Tareas').find(x=>x.id===el.dataset.id);openSheet(formWrap('Informar avance','avance',`<p style="margin:0 0 12px;font-weight:700">${esc(t.titulo)}${t.parcela?' · '+esc(t.parcela):''}</p><div class="field"><label for="f-av-t">¿Qué se hizo hoy?</label><textarea id="f-av-t" name="texto" maxlength="500" placeholder="Ej. Se limpió la mitad del lote"></textarea></div><div class="field"><label>Estado de la labor</label><div class="checks"><label for="f-av-p"><input id="f-av-p" type="radio" name="fin" value="0" checked>Sigue en curso (avance parcial)</label><label for="f-av-f"><input id="f-av-f" type="radio" name="fin" value="1">Ya quedó terminada</label></div></div>`,t.id,'Enviar informe'))},
+  newAviso:()=>{const h=Number(new Intl.DateTimeFormat('en-US',{timeZone:TZ,hour:'numeric',hour12:false}).format(new Date()))%24;openSheet(formWrap('Avisar un problema del ordeño','aviso',`<div class="field"><label for="f-av-tipo">¿Qué vio?</label><select id="f-av-tipo" name="tipo">${opts(Object.keys(AVL).map(k=>[k,AVL[k]]))}</select></div><div class="field"><label for="f-av-an">Animal</label><input id="f-av-an" name="animal" required maxlength="60" placeholder="Número o nombre de la vaca"></div><div class="field"><label for="f-av-nota">Observación</label><textarea id="f-av-nota" name="nota" maxlength="300" placeholder="Ej. Muchas garrapatas en las orejas"></textarea></div><div class="field"><label for="f-av-tn">Turno</label><select id="f-av-tn" name="turno">${opts([['M','Mañana'],['T','Tarde']],h<12?'M':'T')}</select><small>El aviso le llega al veterinario, al mandador, al capataz y al administrador dentro de la app.</small></div>`,'','Enviar aviso'))},
+  avisoOk:el=>act(async()=>{const a=T('Avisos').find(x=>x.id===el.dataset.id);await upd('Avisos',a.id,{estado:'atendido',atendidoPor:S.user.nombre,atendidoFecha:today()});if(a.animalId)await hist(a.animalId,`Aviso del ordeño atendido: ${AVL[a.tipo]||a.tipo}`);render();toast('Aviso atendido')}),
+  rateEdit:el=>{const x=((S.resumen||{}).resumen||[]).find(r=>r.personalId===el.dataset.p);if(!x)return;const g=S.resumen.tarifas,f=(k,l)=>`<div class="field"><label for="f-rt-${k}">${l}</label><input id="f-rt-${k}" name="${k}" type="number" min="0" step="0.5" value="${x.propia[k]?x.tarifas[k]:''}" placeholder="${g[k]==null?'Sin tarifa':'General: '+money(g[k])}"></div>`;openSheet(formWrap('Tarifa individual · '+esc(x.nombre),'rate',`<p class="muted" style="margin:0 0 12px;font-size:14px">Deje un campo vacío para usar la tarifa general. Rige desde hoy; las semanas ya pagadas no cambian.</p><div class="row2">${f('M','Mañana')}${f('T','Tarde')}</div>${f('D','Día completo')}`,x.personalId))},
   problem:el=>openSheet(formWrap('Reportar un problema','problem',`<div class="field"><label for="f-text">¿Qué pasó?</label><textarea id="f-text" name="texto" required maxlength="300"></textarea></div>`,el.dataset.id)),
   fenceTask:()=>act(async()=>{await add('Tareas',{titulo:'Revisión periódica de cercos',categoria:'Cercos',fecha:satOf(addDays(today(),1)),limite:'',personalId:'',prioridad:'normal',estado:'pendiente',notas:'Anotar daños y reportarlos con detalle.'});S.tf='todas';render();toast('Tarea de revisión creada')}),
   newCultivo:()=>openSheet(formWrap('Nuevo cultivo','newCultivo',`
@@ -853,7 +995,7 @@ const ACTS={
   newUser:()=>openSheet(formWrap('Agregar usuario','newUser',`
     <div class="field"><label for="f-name">Nombre</label><input id="f-name" name="nombre" required maxlength="80"></div>
     <div class="field"><label for="f-user">Usuario para entrar</label><input id="f-user" name="usuario" required minlength="3" maxlength="30" pattern="[a-z0-9._\\-]{3,30}" autocapitalize="none" autocomplete="off"><small>De 3 a 30 caracteres: letras minúsculas, números, punto, guion o guion bajo.</small></div>
-    <div class="field"><label for="f-role">Rol</label><select id="f-role" name="rol">${opts([['mozo','Mozo'],['capataz','Capataz'],['mandador','Mandador'],['admin','Administrador']])}</select><small>Se crea con una clave temporal que debe cambiar al primer ingreso. Los mozos aparecen en la lista de personal automáticamente.</small></div>
+    <div class="field"><label for="f-role">Rol</label><select id="f-role" name="rol">${opts([['mozo','Mozo'],['capataz','Capataz'],['mandador','Mandador'],['admin','Administrador'],['veterinario','Veterinario'],['mecanico','Mecánico']])}</select><small>Se crea con una clave temporal que debe cambiar al primer ingreso. Los mozos aparecen en la lista de personal automáticamente.</small></div>
     <div class="checks" style="margin-bottom:12px"><label for="f-jor"><input id="f-jor" type="checkbox" name="jornadas">También registra jornadas de trabajo (no aplica a mozos)</label></div>`,'', 'Crear usuario')),
   logoutUser:el=>act(async()=>{await api('sesionCerrar',{id:el.dataset.id});await loadUsuarios();toast('Sesión cerrada')}),
   resetPwd:el=>{
@@ -886,6 +1028,7 @@ document.addEventListener('submit',e=>{
   const b=f.querySelector('[type=submit]');if(b)b.disabled=true;
   (async()=>{try{await h(Object.fromEntries(new FormData(f)),f)}catch(err){showErr(err)}finally{if(b&&b.isConnected)b.disabled=false}})();
 });
+document.addEventListener('change',e=>{if(e.target.id==='f-file')subirFoto(e.target)});
 document.addEventListener('input',e=>{if(e.target.id==='q'){S.q=e.target.value;const l=$('#glist');if(l)l.innerHTML=animalRows()}});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!$('#sheet').hidden)closeSheet()});
 document.addEventListener('visibilitychange',()=>{
@@ -894,6 +1037,478 @@ document.addEventListener('visibilitychange',()=>{
   }
 });
 window.addEventListener('unhandledrejection',e=>{e.preventDefault();showErr(e.reason)});
+
+/* ───────── Versión 3.0: comentarios con foto, correcciones, pedidos, vehículos, parcelas, rutinas, fichas y reportes ───────── */
+const tsMs=ts=>/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(String(ts||''))?Date.parse(String(ts).slice(0,19)+'-06:00'):0;
+const canFix=(autor,ts)=>isAdmin()||(!!autor&&autor===S.user.nombre&&tsMs(ts)>0&&Date.now()-tsMs(ts)<86400000);
+const fimg=id=>`<img alt="" data-fid="${esc(id)}"${S.fc[id]?` src="${S.fc[id]}"`:''}>`;
+const fotoField=id=>`<div class="field"><label class="btn alt" for="${id}" style="display:inline-block">Tomar o elegir foto</label><input id="${id}" type="file" accept="image/*" data-foto hidden><small class="fotoInfo" aria-live="polite">Sin foto (opcional)</small></div>`;
+async function leerFoto(f){const i=f.querySelector('input[data-foto]'),file=i&&i.files[0];return file?await reducirFoto(file):''}
+let lazyOn=false;
+async function lazyFotos(){
+  if(lazyOn)return;lazyOn=true;
+  try{
+    for(let n=0;n<40;n++){
+      const im=document.querySelector('img[data-fid]:not([src])');if(!im)break;
+      const id=im.dataset.fid;
+      try{const s=await getFoto(id);document.querySelectorAll(`img[data-fid="${id}"]`).forEach(x=>x.src=s)}
+      catch(e){document.querySelectorAll(`img[data-fid="${id}"]`).forEach(x=>x.setAttribute('src','data:image/gif;base64,R0lGODlhAQABAAAAACw='));if(e&&e.codigo==='RED')break}
+    }
+  }finally{lazyOn=false}
+}
+function showLb(src,cap){
+  const d=document.createElement('div');d.id='lb';d.setAttribute('data-act','lbclose');
+  d.style.cssText='position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.93);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px;gap:10px';
+  d.innerHTML=`<img src="${src}" alt="Foto" style="max-width:100%;max-height:80vh;border-radius:8px"><div style="color:#fff;text-align:center">${esc(cap||'')}</div><button class="btn" type="button">Cerrar</button>`;
+  document.body.appendChild(d);
+}
+
+/* Comentarios con foto (todos los roles) */
+const cmtsOf=(m,r)=>T('Comentarios').filter(c=>c.modulo===m&&(m==='General'||c.refId===r)).sort((a,b)=>String(b.ts).localeCompare(String(a.ts)));
+function cmtHtml(c,etq){
+  return `<div class="cmt"><div class="sub"><b>${esc(c.autor)}</b> · ${esc(ROL[c.rol]||'')} · ${esc(ftime(c.ts))}${etq&&c.etiqueta?' · '+esc(c.etiqueta):''}</div>${c.texto?`<div>${esc(c.texto)}</div>`:''}${c.fotoId?`<button class="foto mini" type="button" data-act="verfoto" data-id="${esc(c.fotoId)}" aria-label="Ver foto">${fimg(c.fotoId)}</button>`:''}${canFix(c.autor,c.ts)?`<div><button class="btn sm alt" data-act="fix" data-t="Comentarios" data-id="${esc(c.id)}">Corregir</button></div>`:''}</div>`;
+}
+function cmtBlock(m,r,max,titulo){
+  const l=cmtsOf(m,r),show=max?l.slice(0,max):l;
+  return `<div class="cmts">${titulo===false?'':`<div class="lbl" style="margin:12px 0 4px">${titulo||'Comentarios y fotos'}</div>`}${show.map(c=>cmtHtml(c)).join('')}${max&&l.length>max?`<div class="sub muted">Y ${l.length-max} más…</div>`:''}<button class="btn sm alt" style="margin-top:8px" data-act="comentar" data-m="${m}" data-r="${esc(r)}">Comentar o tomar foto</button></div>`;
+}
+const refreshSheet=()=>{const fn=S.sheetFn;closeSheet();render();if(fn)fn()};
+
+/* Texto de lo que se corrige: ¿es del autor y está dentro de las 24 horas? */
+const fixBtn=(tabla,id,autor,ts)=>canFix(autor,ts)?`<button class="btn sm alt" data-act="fix" data-t="${tabla}" data-id="${esc(id)}">Corregir</button>`:'';
+
+/* Genealogía: hasta tatarabuelos. Cada casilla es un animal de la lista o un nombre escrito. */
+function genealogia(a){
+  const nombres=[['Padres'],['Abuelos'],['Bisabuelos'],['Tatarabuelos']];
+  let nivel=[{path:'',a:a}];const out=[];
+  for(let k=0;k<4;k++){
+    const sig=[];
+    nivel.forEach(s=>{
+      ['M','P'].forEach(c=>{
+        let ref={path:s.path+c};
+        if(s.a){
+          const id=c==='M'?s.a.madreId:s.a.padreId,tx=c==='M'?s.a.madreTexto:s.a.padreTexto;
+          const an=id?T('Animales').find(x=>x.id===id):null,vis=s.vistos||[a.id];
+          if(an&&!vis.includes(an.id)){ref.a=an;ref.vistos=vis.concat(an.id)}
+          else if(tx)ref.t=tx;
+        }
+        sig.push(ref);
+      });
+    });
+    if(!sig.some(s=>s.a||s.t))break;
+    out.push({n:nombres[k][0],slots:sig});nivel=sig;
+  }
+  return out;
+}
+const pathLabel=p=>{
+  if(p==='M')return 'Madre';if(p==='P')return 'Padre';
+  const fem=p[p.length-1]==='M',noun={2:['Abuelo','Abuela'],3:['Bisabuelo','Bisabuela'],4:['Tatarabuelo','Tatarabuela']}[p.length][fem?1:0];
+  const side=p[0]==='M'?(fem?'materna':'materno'):(fem?'paterna':'paterno');
+  if(p.length===2)return `${noun} ${side}`;
+  const det=p.split('').reverse().map((c,k)=>k===0?(c==='M'?'madre':'padre'):(c==='M'?'de la madre':'del padre')).join(' ');
+  return `${noun} ${side} (${det})`;
+};
+function genHtml(a,compact){
+  const g=genealogia(a);
+  if(!g.length)return '<div class="item muted">Sin antecedentes registrados.</div>';
+  return g.map(l=>`<div class="lbl" style="margin:10px 0 4px">${l.n}</div><div class="gen">${l.slots.filter(s=>s.a||s.t||l.n==='Padres'||l.n==='Abuelos').map(s=>`<div class="gslot"><small>${esc(pathLabel(s.path))}</small>${s.a?(compact?`<b>${esc(s.a.nombre)} #${esc(s.a.numero)}</b>`:`<button class="btn sm alt" data-act="animal" data-id="${esc(s.a.id)}">${esc(s.a.nombre)} #${esc(s.a.numero)}</button>`):s.t?`<b>${esc(s.t)}</b>`:'<span class="muted">—</span>'}</div>`).join('')}</div>`).join('');
+}
+
+/* Sugerencias de nombre para crías */
+const raiz=n=>String(n||'').trim().split(/\s+/)[0].replace(/[aeiouáéíóú]$/i,'');
+function sugerirNombres(madre,padre,sexo){
+  const out=[],suf=sexo==='M'?'ito':'ita';
+  const mn=String(madre||'').trim().split(/\s+/)[0],pn=String(padre||'').trim().split(/\s+/)[0];
+  if(mn)out.push(raiz(mn)+suf);
+  if(pn)out.push(raiz(pn)+suf);
+  if(mn)out.push(mn+' II');
+  if(mn&&pn&&mn.length>2&&pn.length>2){const x=mn.slice(0,Math.ceil(mn.length/2)),y=pn.slice(-Math.ceil(pn.length/2));out.push(cap1((x+y).toLowerCase()))}
+  const usados=new Set(T('Animales').map(a=>String(a.nombre).toLowerCase()));
+  return [...new Set(out.map(cap1))].filter(n=>n.length>2&&!usados.has(n.toLowerCase())).slice(0,4);
+}
+function refreshSugs(f){
+  const box=f.querySelector('#sugs');if(!box)return;
+  const v=n=>(f.querySelector(`[name="${n}"]`)||{}).value||'';
+  const mid=v('madreId'),pid2=v('padreId');
+  const mad=mid?(T('Animales').find(x=>x.id===mid)||{}).nombre:v('madreTexto'),pad=pid2?(T('Animales').find(x=>x.id===pid2)||{}).nombre:v('padreTexto');
+  const l=sugerirNombres(mad,pad,v('sexo'));
+  box.innerHTML=l.length?`<small>Sugerencias según los padres (toque una o escriba el nombre que prefiera):</small><div class="chips" style="margin:4px 0 0">${l.map(n=>`<button type="button" class="on" data-act="sugName" data-n="${esc(n)}">${esc(n)}</button>`).join('')}</div>`:'';
+}
+
+/* ───────── Pantallas nuevas ───────── */
+const PED_ESTADO={pendiente:['Pendiente','warn'],aprobado:['Aprobado','gold'],comprado:['Comprado','gold'],recibido:['Recibido','ok'],rechazado:['Rechazado','bad']};
+const pedTipos=()=>S.user.rol==='veterinario'?['Medicamento','Material veterinario','Otro']:S.user.rol==='mecanico'?['Repuesto','Herramienta','Otro']:S.user.rol==='mozo'?['Limpieza','Alimento','Herramienta','Otro']:['Limpieza','Alimento','Herramienta','Repuesto','Medicamento','Material veterinario','Otro'];
+const vehName=id=>{const v=T('Vehiculos').find(x=>x.id===id);return v?v.nombre:''};
+const pedPuedeEditar=p=>p.creadoPor===S.user.nombre&&(p.estado==='pendiente'||canFix(p.creadoPor,p.ts))||isAdmin();
+function pedFotos(p){return T('Fotos').filter(f=>f.modulo==='Pedidos'&&f.refId===p.id).map(f=>`<button class="foto mini" type="button" data-act="verfoto" data-id="${esc(f.id)}" aria-label="Ver foto">${fimg(f.id)}</button>`).join('')}
+function pedItem(p){
+  const e=PED_ESTADO[p.estado]||[p.estado,'n'],ops=canOps(),adm=isAdmin();
+  const acts=[];
+  if(ops&&p.estado!=='recibido')acts.push(`<button class="btn sm" data-act="pedResp" data-id="${esc(p.id)}">Responder</button>`);
+  if(!ops&&p.creadoPor===S.user.nombre&&(p.estado==='aprobado'||p.estado==='comprado'))acts.push(`<button class="btn sm" data-act="pedRecibido" data-id="${esc(p.id)}">Ya lo recibí</button>`);
+  if(ops&&(p.estado==='aprobado'||p.estado==='comprado'))acts.push(`<button class="btn sm alt" data-act="pedRecibido" data-id="${esc(p.id)}">Marcar recibido</button>`);
+  if(pedPuedeEditar(p)&&p.estado!=='recibido')acts.push(`<button class="btn sm alt" data-act="pedEdit" data-id="${esc(p.id)}">Corregir</button>`);
+  return `<div class="item" style="align-items:flex-start"><div class="item-main"><div class="t">${esc(p.titulo)} ${pill(e[0],e[1])}${p.urgencia==='urgente'?pill('Urgente','bad'):''}</div>
+  <div class="sub">${esc(p.tipo)}${p.cantidad?' · '+esc(p.cantidad):''} · pidió ${esc(p.creadoPor)} (${esc(ROL[p.origen]||p.origen)}) · ${fdate(p.fecha)}${p.refModulo==='Vehiculos'&&vehName(p.refId)?' · para '+esc(vehName(p.refId)):''}</div>
+  ${p.detalle?`<div class="note">${esc(p.detalle)}</div>`:''}${p.respuesta?`<div class="sub"><b>Respuesta${p.atendidoPor?' de '+esc(p.atendidoPor):''}:</b> ${esc(p.respuesta)}</div>`:''}${p.recibidoPor?`<div class="sub">Recibido por ${esc(p.recibidoPor)} el ${fdate(p.recibidoFecha)}</div>`:''}${adm&&p.costo!==''&&p.costo!=null?`<div class="sub num">Costo ${money(p.costo)}</div>`:''}${pedFotos(p)}</div>
+  <div style="display:flex;flex-direction:column;gap:4px">${acts.join('')}</div></div>`;
+}
+V.pedidos=()=>{
+  const ops=canOps(),f=S.pf||'abiertos';
+  let l=[...T('Pedidos')];
+  if(f==='abiertos')l=l.filter(p=>['pendiente','aprobado','comprado'].includes(p.estado));
+  if(f==='recibidos')l=l.filter(p=>p.estado==='recibido'||p.estado==='rechazado');
+  l.sort((a,b)=>(a.urgencia==='urgente'?0:1)-(b.urgencia==='urgente'?0:1)||String(b.ts).localeCompare(String(a.ts)));
+  const n=T('Pedidos').filter(p=>p.estado==='pendiente').length;
+  return `<div class="pagehead"><div><h1>Pedidos</h1><p>${ops?'Lo que hace falta en la finca. Aquí llegan también los pedidos del veterinario y del mecánico.':'Lo que usted pidió y cómo va.'}</p></div><button class="btn" data-act="newPedido">Nuevo pedido</button></div>
+  <div class="chips">${[['abiertos','Por atender'+(ops&&n?' · '+n:'')],['recibidos','Cerrados'],['todos','Todos']].map(c=>`<button class="${f===c[0]?'on':''}" data-act="pf" data-k="${c[0]}">${c[1]}</button>`).join('')}</div>
+  <div class="list">${l.map(pedItem).join('')||'<div class="item muted">No hay pedidos aquí.</div>'}</div>
+  ${ops?'':'<p class="muted" style="font-size:14px;margin-top:12px">Solo usted ve sus pedidos. El administrador, el mandador y el capataz ven todos.</p>'}`;
+};
+V.vehiculos=()=>{
+  const mng=canOps()||S.user.rol==='mecanico',l=T('Vehiculos').filter(v=>v.activo!==false);
+  return `<div class="pagehead"><div><h1>Vehículos</h1><p>Camión y motos. Cualquiera puede avisar de una falla con comentario y foto.</p></div>${mng?'<button class="btn" data-act="newVeh">Nuevo vehículo</button>':''}</div>
+  <div class="stack">${l.map(v=>{
+    const ok=v.estado==='Operativo',ped=T('Pedidos').filter(p=>p.refModulo==='Vehiculos'&&p.refId===v.id&&['pendiente','aprobado','comprado'].includes(p.estado)).length;
+    return `<div class="card"><div style="display:flex;justify-content:space-between;gap:8px;align-items:flex-start"><div><h3>${esc(v.nombre)}</h3><div class="sub muted" style="font-size:14px">${esc(v.tipo||'')}${v.placa?' · placa '+esc(v.placa):''}${v.proximaRevision?' · próxima revisión '+fdate(v.proximaRevision):''}</div></div>${pill(v.estado||'Operativo',ok?'ok':'bad')}</div>
+    ${v.nota?`<div class="note" style="margin-top:8px;background:var(--surface-2);border-radius:6px;padding:6px 8px">${esc(v.nota)}</div>`:''}${ped?`<div class="sub" style="margin-top:6px">${pill(ped+' pedido'+(ped>1?'s':'')+' abierto'+(ped>1?'s':''),'warn')}</div>`:''}
+    ${cmtBlock('Vehiculos',v.id,3)}
+    <div class="toolbar" style="margin:10px 0 0">${mng?`<button class="btn sm alt" data-act="editVeh" data-id="${esc(v.id)}">Cambiar estado</button><button class="btn sm alt" data-act="newPedido" data-veh="${esc(v.id)}">Pedir repuesto</button>`:''}</div></div>`}).join('')||`<div class="card muted">Todavía no hay vehículos.${mng?` <button class="btn sm" style="margin-top:8px" data-act="vehBase">Agregar camión, moto y moto con cama</button>`:''}</div>`}</div>`;
+};
+const usoL={potrero:'Potrero',cultivo:'Cultivo',mixto:'Potrero y cultivo',cerco:'Cerco',instalaciones:'Instalaciones',otro:'Otro'};
+const tFin=t=>t.limite||(t.inicio&&t.dias?addDays(t.inicio,t.dias-1):(t.inicio||t.fecha));
+const tCubre=(t,d)=>{const i=t.inicio||t.fecha;return !!i&&i<=d&&d<=(tFin(t)||i)};
+const tareasDeParcela=p=>T('Tareas').filter(t=>t.parcela===p.nombre);
+V.parcelas=()=>{
+  const l=T('Parcelas').filter(p=>p.activo!==false),td=today();
+  return `<div class="pagehead"><div><h1>Parcelas y cercos</h1><p>Cada parcela tiene su perfil: qué hay, qué se hace cada día y quién lo hace.</p></div><button class="btn" data-act="newParcela">Nueva parcela</button></div>
+  <div class="split two">${l.map(p=>{
+    const ts=tareasDeParcela(p),hoy=ts.filter(t=>t.estado!=='completado'&&tCubre(t,td));
+    return `<button class="card" style="text-align:left;width:100%;cursor:pointer" data-act="parcela" data-id="${esc(p.id)}"><div style="display:flex;justify-content:space-between;gap:8px"><h3>${esc(p.nombre)}</h3>${pill(usoL[p.uso]||'Otro','gold')}</div>
+    <div class="sub muted" style="font-size:14px">${p.area!==''&&p.area!=null?esc(p.area)+' '+esc({mz:'manzanas',ha:'hectáreas',m2:'m²'}[p.unidad]||'')+' · ':''}${esc(p.descripcion||'Sin descripción')}</div>
+    <div class="sub" style="margin-top:6px">${hoy.length?pill('Hoy: '+hoy.length+' actividad'+(hoy.length>1?'es':''),'warn'):pill('Sin actividades hoy','n')} ${ts.filter(t=>t.estado!=='completado').length?pill(ts.filter(t=>t.estado!=='completado').length+' abierta(s)','n'):''}</div></button>`}).join('')||'<div class="card muted">Todavía no hay parcelas. Cree la primera con el botón de arriba.</div>'}</div>`;
+};
+function parcelaSheet(id){
+  const p=T('Parcelas').find(x=>x.id===id);if(!p){closeSheet();return}
+  const td=today(),ts=tareasDeParcela(p),cult=T('Cultivos').filter(c=>c.activo!==false&&c.parcela===p.nombre);
+  const dias=[0,1,2,3,4,5,6].map(n=>addDays(td,n));
+  const agenda=dias.map(d=>{const l=ts.filter(t=>t.estado!=='completado'&&tCubre(t,d));return l.length?`<div class="item" style="align-items:flex-start"><div class="item-main"><div class="t">${wdOf(d)} ${fdate(d)}${d===td?' · hoy':''}</div>${l.map(t=>`<div class="sub"><b>${esc(t.titulo)}</b> · ${esc(tnames(t))}</div>`).join('')}</div></div>`:''}).join('');
+  const hechas=ts.filter(t=>t.estado==='completado').sort((a,b)=>String(tFin(b)).localeCompare(String(tFin(a)))).slice(0,6);
+  openSheet(sheetTop(esc(p.nombre))+`<dl class="kv"><dt>Uso</dt><dd>${esc(usoL[p.uso]||'Otro')}</dd><dt>Tamaño</dt><dd>${p.area!==''&&p.area!=null?esc(p.area)+' '+esc({mz:'manzanas',ha:'hectáreas',m2:'m²'}[p.unidad]||''):'—'}</dd><dt>Qué hay</dt><dd>${esc(p.descripcion||'—')}</dd>${p.notas?`<dt>Notas</dt><dd>${esc(p.notas)}</dd>`:''}${cult.length?`<dt>Cultivos</dt><dd>${cult.map(c=>esc(c.nombre)).join(', ')}</dd>`:''}</dl>
+  <div class="toolbar" style="margin-top:10px"><button class="btn sm" data-act="newTask" data-parcela="${esc(p.nombre)}">Programar actividad</button><button class="btn sm alt" data-act="editParcela" data-id="${esc(p.id)}">Editar perfil</button></div>
+  <div class="lbl" style="margin:12px 0 6px">Actividades de los próximos 7 días</div><div class="list">${agenda||'<div class="item muted">No hay actividades programadas.</div>'}</div>
+  <div class="lbl" style="margin:12px 0 6px">Hechas recientemente</div><div class="list">${hechas.map(t=>`<div class="item"><div class="item-main"><div class="t" style="font-weight:600">${esc(t.titulo)}</div><div class="sub">${fdate(t.inicio||t.fecha)}${tFin(t)&&tFin(t)!==(t.inicio||t.fecha)?' al '+fdate(tFin(t)):''} · ${esc(tnames(t))}${t.completadoPor?' · terminó '+esc(t.completadoPor):''}</div></div></div>`).join('')||'<div class="item muted">Nada todavía.</div>'}</div>
+  ${cmtBlock('Parcelas',p.id,0,'Seguimiento, comentarios y fotos')}`,()=>parcelaSheet(id));
+}
+
+/* Rutinas */
+const rutinasActivas=()=>T('Rutinas').filter(r=>r.activa!==false);
+const rchk=(r,f,t)=>T('RutinaCheck').find(c=>c.rutinaId===r.id&&c.fecha===f&&(c.turno||'')===(t||''));
+function rutinasCard(){
+  const td=today(),rs=rutinasActivas();if(!rs.length&&!canOps())return '';
+  const ops=canOps(),mine=t=>ops||String(t.personal||'').split(',').includes(S.user.personalId);
+  const turnos=T('Ordeno').filter(e=>e.fecha===td);
+  const filas=[];
+  rs.forEach(r=>{
+    if(r.ambito==='diaria'){const c=rchk(r,td,'');filas.push([r,td,'',c,true])}
+    else turnos.forEach(e=>{const c=rchk(r,td,e.turno);filas.push([r,td,e.turno,c,mine(e)])});
+  });
+  return `<div><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><h2 style="margin:0">Rutinas de hoy</h2>${ops?'<button class="btn sm alt" data-act="rutinas">Administrar</button>':''}</div>
+  <div class="list">${filas.map(([r,f,t,c,can])=>{const ok=c&&c.hecho;return `<div class="item"><div class="item-main"><div class="t" style="font-weight:600">${esc(r.titulo)}${t?pill(t==='M'?'Mañana':'Tarde','n'):''}</div>${ok?`<div class="sub">Hecho por ${esc(c.por)}</div>`:''}</div>${can?`<button class="btn sm ${ok?'alt':''}" data-act="rutina" data-r="${esc(r.id)}" data-f="${f}" data-t="${t}" data-h="${ok?'0':'1'}">${ok?'Deshacer':'Ya se hizo'}</button>`:''}</div>`}).join('')||`<div class="item muted">${rs.length?'Hoy no hay turnos de ordeño asignados para sus rutinas.':'No hay rutinas. Cree las del ordeño o las de todos los días con “Administrar”.'}</div>`}</div></div>`;
+}
+
+/* Observaciones recientes (equipo) y reporte general */
+function obsCard(){
+  const l=T('Comentarios').filter(c=>c.modulo==='General'||['Vehiculos','Parcelas','Tareas','Ordeno','Animales','Pedidos'].includes(c.modulo)).sort((a,b)=>String(b.ts).localeCompare(String(a.ts))).slice(0,6);
+  return `<div><h2 style="margin-bottom:8px">Observaciones recientes</h2><div class="list">${l.map(c=>`<div class="item" style="align-items:flex-start"><div class="item-main">${cmtHtml(c,true)}</div></div>`).join('')||'<div class="item muted">Todavía nadie ha dejado comentarios.</div>'}</div></div>`;
+}
+
+V.inicio=()=>{
+  const u=S.user,al=alertsFor(),td=today(),mozo=u.rol==='mozo',vt=u.rol==='veterinario',mec=u.rol==='mecanico',ops=canOps();
+  const m=T('Ordeno').find(e=>e.fecha===td&&e.turno==='M');
+  const rows=[];
+  if(mozo||ops)rows.push(['ordeno','Ordeño de hoy, mañana',m&&m.botellas!=null?`${m.botellas} botellas`:m&&m.estado!=='asignado'?pill('Sin registrar','warn'):m?pill('Asignado','n'):'<span class="muted">Sin turno</span>']);
+  if(mozo||ops)rows.push(['tareas',mozo?'Tus tareas pendientes':'Tareas pendientes',T('Tareas').filter(t=>t.estado!=='completado').length]);
+  if(vt)rows.push(['ganado','Animales registrados',animals().length]);
+  if(ops||vt){const v=T('Tratamientos').filter(t=>tstatus(t)==='Vencido').length;rows.push(['vet','Tratamientos vencidos',v?pill(v+' vencido'+(v>1?'s':''),'bad'):pill('Al día','ok')])}
+  if(ops||vt){const n=T('Avisos').filter(a=>a.estado==='nuevo').length;rows.push(['vet','Avisos del ordeño sin atender',n?pill(n+' nuevo'+(n>1?'s':''),'bad'):pill('Al día','ok')])}
+  if(ops||mec){const n=T('Vehiculos').filter(v=>v.activo!==false&&v.estado!=='Operativo').length;rows.push(['vehiculos','Vehículos con problemas',n?pill(n+' sin operar','bad'):pill('Todos operativos','ok')])}
+  if(ops){const n=T('Pedidos').filter(p=>p.estado==='pendiente').length;rows.push(['pedidos','Pedidos por responder',n?pill(n+' pendiente'+(n>1?'s':''),'warn'):pill('Al día','ok')])}
+  else{const n=T('Pedidos').filter(p=>['pendiente','aprobado','comprado'].includes(p.estado)).length;rows.push(['pedidos','Mis pedidos abiertos',n||'Ninguno'])}
+  if(u.rol==='admin')rows.push(['personal','Pago semanal',`Sábado ${fdate(satOf(td))}`]);
+  const fecha=cap1(new Intl.DateTimeFormat('es-SV',{timeZone:TZ,weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date()));
+  const head={admin:'Panorama general',capataz:'Panel del capataz',mandador:'Panel del mandador',mozo:'Tus labores de hoy',veterinario:'Panel del veterinario',mecanico:'Panel del mecánico'}[u.rol];
+  return `<div class="pagehead"><div><h1>${head}</h1><p>${esc(fecha)} · ${esc(u.nombre)}</p></div><div class="toolbar" style="margin:0"><button class="btn" data-act="comentar" data-m="General" data-r="">Reportar algo</button><button class="btn alt sm" data-act="refresh">Actualizar datos</button></div></div>
+  <div class="stack"><div class="list today">${rows.map(r=>`<div class="item" data-act="go" data-v="${r[0]}"><div class="item-main">${r[1]}</div><div class="val num">${r[2]}</div></div>`).join('')}</div>
+  <div><h2 style="margin-bottom:8px">Requiere atención</h2>${al.length?`<div class="list">${al.slice(0,5).map(a=>`<button class="item click stripe ${a.level==='bad'?'bad':'warn'}" data-act="go" data-v="${a.mod}"><div class="item-main">${esc(a.text)}</div></button>`).join('')}</div>${al.length>5?`<p class="muted" style="margin:8px 0 0">Y ${al.length-5} más en <a href="#" data-act="go" data-v="alertas" style="color:var(--gold-ink);font-weight:700">Alertas</a>.</p>`:''}`:'<div class="card muted">Nada pendiente por ahora.</div>'}</div>
+  ${ops?obsCard():''}</div>`;
+};
+
+/* ───────── Ficha imprimible del animal (administrador) ───────── */
+function aniosMeses(desde,hasta){
+  if(!desde)return 'Sin fecha de ingreso registrada';
+  const a=new Date(desde+'T12:00:00Z'),b=new Date((hasta||today())+'T12:00:00Z');
+  let m=(b.getUTCFullYear()-a.getUTCFullYear())*12+b.getUTCMonth()-a.getUTCMonth();if(b.getUTCDate()<a.getUTCDate())m--;
+  if(m<0)m=0;const y=Math.floor(m/12),r=m%12,d=dayDiff(desde,hasta||today());
+  return m<1?`${d} día${d===1?'':'s'}`:(y?`${y} año${y===1?'':'s'}`:'')+(y&&r?' y ':'')+(r?`${r} mes${r===1?'':'es'}`:'');
+}
+const tableHtml=(head,rows)=>`<div class="rtw"><table class="rt"><thead><tr>${head.map(h=>`<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${c==null?'':c}</td>`).join('')}</tr>`).join('')||`<tr><td colspan="${head.length}" style="color:#555">Sin datos</td></tr>`}</tbody></table></div>`;
+function showReport(html,titulo){
+  S.reportHtml=html;const r=$('#rep');
+  r.innerHTML=`<div class="noprint rtool"><button class="btn" data-act="repPrint">Imprimir o guardar PDF</button><button class="btn alt" data-act="repClose">Cerrar</button><span class="muted" style="font-size:14px">En “Imprimir”, elija “Guardar como PDF”.</span></div><div class="rpage"><div class="rhead"><b>El Corral MCM</b><span>${esc(titulo||'')}</span></div>${html}<p class="rfoot">Generado el ${fdatey(today())} por ${esc(S.user.nombre)}.</p></div>`;
+  r.hidden=false;document.body.classList.add('repOpen');r.scrollTop=0;
+}
+async function fichaAnimal(id){
+  const a=T('Animales').find(x=>x.id===id);if(!a)return;
+  const crias=T('Animales').filter(x=>x.madreId===a.id||x.padreId===a.id).sort((x,y)=>String(x.fechaIngreso||'').localeCompare(String(y.fechaIngreso||'')));
+  const trat=T('Tratamientos').filter(t=>covers(t,a)).sort((x,y)=>String(y.fechaAplicada||y.fechaProgramada).localeCompare(String(x.fechaAplicada||x.fechaProgramada)));
+  const hist=T('Historial').filter(h=>h.animalId===a.id).sort((x,y)=>String(y.fecha).localeCompare(String(x.fecha)));
+  const cm=cmtsOf('Animales',a.id),av=T('Avisos').filter(x=>x.animalId===a.id);
+  const fts=T('Fotos').filter(f=>f.modulo==='Animales'&&f.refId===a.id).sort((x,y)=>String(x.fecha).localeCompare(String(y.fecha)));
+  const baja=a.activo===false;
+  showReport(`<h1 class="rh1">${esc(a.nombre)} · #${esc(a.numero)}</h1>
+  <table class="rt kvt"><tr><th>Tipo</th><td>${esc(a.tipo)}${a.sexo?' · '+(a.sexo==='H'?'Hembra':'Macho'):''}</td></tr>
+  <tr><th>Grupo</th><td>${esc(gname(a.grupoId))}</td></tr>
+  <tr><th>Ingreso o nacimiento</th><td>${fdatey(a.fechaIngreso)}</td></tr>
+  <tr><th>Tiempo en el corral</th><td>${esc(aniosMeses(a.fechaIngreso,baja?a.bajaFecha:''))}${baja?' (hasta la baja)':''}</td></tr>
+  <tr><th>Estado</th><td>${baja?`<b>De baja</b> el ${fdatey(a.bajaFecha)} · Motivo: ${esc(a.bajaMotivo||'—')}${a.bajaNota?' · '+esc(a.bajaNota):''}`:'Activo en el corral'}</td></tr>
+  <tr><th>Número de crías</th><td><b>${crias.length}</b>${crias.length?': '+crias.map(c=>esc(c.nombre)+' #'+esc(c.numero)+(c.fechaIngreso?' ('+fdatey(c.fechaIngreso)+')':'')).join(', '):''}</td></tr>
+  ${a.tipo==='Vaca'?`<tr><th>Ordeño</th><td>${a.ordenoDesde?'Desde el '+fdatey(a.ordenoDesde):'Sin fecha de inicio'}${a.ordenoHasta?' · reposo el '+fdatey(a.ordenoHasta):''}</td></tr>`:''}</table>
+  ${a.observaciones?`<p><b>Observaciones:</b> ${esc(a.observaciones)}</p>`:''}
+  <h2 class="rh2">Antecedentes (genealogía)</h2>${genHtml(a,true)}
+  <h2 class="rh2">Medicamentos y seguimiento médico</h2>${tableHtml(['Fecha','Tratamiento','Aplicado a','Responsable','Estado'],trat.map(t=>[fdate(t.fechaAplicada||t.fechaProgramada),esc(t.titulo)+(t.nota?'<br><small>'+esc(t.nota)+'</small>':''),esc(scopeLabel(t)),esc(t.responsable||''),t.fechaAplicada?'Aplicado':'Pendiente (para el '+fdate(t.fechaProgramada)+')']))}
+  ${av.length?`<h2 class="rh2">Avisos y emergencias</h2>${tableHtml(['Fecha','Tipo','Detalle','Avisó'],av.map(x=>[fdate(x.fecha),esc(AVL[x.tipo]||x.tipo),esc(x.nota||''),esc(x.autor)]))}`:''}
+  <h2 class="rh2">Historial y comentarios</h2>${tableHtml(['Fecha','Anotación','Quién'],[...hist.map(h=>[fdate(h.fecha),esc(h.texto),esc(h.autor||'')]),...cm.map(c=>[fdate(c.fecha),esc(c.texto||'(foto)'),esc(c.autor)])])}
+  <h2 class="rh2">Galería de fotos (${fts.length})</h2><div class="rgal" id="rgal">${fts.map(f=>`<figure>${fimg(f.id)}<figcaption>${fdatey(f.fecha)}${f.descripcion?' · '+esc(f.descripcion):''}<br>${esc(f.autor||'')}</figcaption></figure>`).join('')||'<span style="color:#555">Sin fotos.</span>'}</div>`,'Ficha del animal');
+  lazyFotos();
+}
+
+/* ───────── Reportes (administrador) ───────── */
+const REP_SECS=[['leche','Leche y botellas ordeñadas'],['ordeno','Turnos de ordeño y personas'],['vet','Veterinario: tratamientos, visitas y emergencias'],['horas','Horarios trabajados'],['pagos','Pagos a trabajadores'],['act','Resumen de actividades y quién las hizo'],['ped','Pedidos y compras'],['obs','Observaciones y comentarios']];
+const periodo=k=>{
+  const td=today(),d=new Date(td+'T12:00:00Z');
+  if(k==='semana'){const dow=d.getUTCDay(),lun=addDays(td,-((dow+6)%7));return [lun,td]}
+  if(k==='7')return [addDays(td,-6),td];
+  if(k==='mes')return [td.slice(0,8)+'01',td];
+  if(k==='pasado'){const f=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth()-1,1,12)),l=new Date(Date.UTC(d.getUTCFullYear(),d.getUTCMonth(),0,12));return [f.toISOString().slice(0,10),l.toISOString().slice(0,10)]}
+  return [S.rp.d,S.rp.h];
+};
+V.reportes=()=>{
+  if(!S.rp)S.rp={p:'semana',d:addDays(today(),-6),h:today(),s:['leche','ordeno','vet','horas','pagos','act','ped']};
+  const [d,h]=periodo(S.rp.p);
+  return `<div class="pagehead"><div><h1>Reportes</h1><p>Elija el periodo y lo que quiere ver. Se pueden imprimir o guardar como PDF.</p></div></div>
+  <form data-form="reporte" class="stack"><div class="card"><div class="lbl" style="margin-bottom:6px">Periodo</div>
+  <div class="chips">${[['semana','Esta semana'],['7','Últimos 7 días'],['mes','Este mes'],['pasado','Mes pasado'],['otro','Otras fechas']].map(c=>`<button type="button" class="${S.rp.p===c[0]?'on':''}" data-act="rpp" data-k="${c[0]}">${c[1]}</button>`).join('')}</div>
+  <div class="row2"><div class="field"><label for="r-d">Desde</label><input id="r-d" name="d" type="date" value="${d}" ${S.rp.p==='otro'?'':'readonly'} required></div><div class="field"><label for="r-h">Hasta</label><input id="r-h" name="h" type="date" value="${h}" max="${today()}" ${S.rp.p==='otro'?'':'readonly'} required></div></div></div>
+  <div class="card"><div class="lbl" style="margin-bottom:6px">Qué incluir</div><div class="checks" style="flex-direction:column;gap:10px">${REP_SECS.map(s=>`<label for="rs-${s[0]}"><input id="rs-${s[0]}" type="checkbox" name="sec" value="${s[0]}" ${S.rp.s.includes(s[0])?'checked':''}>${s[1]}</label>`).join('')}</div></div>
+  <button class="btn" type="submit">Generar reporte</button></form>`;
+};
+const inR=(f,d,h)=>!!f&&f>=d&&f<=h;
+async function generarReporte(d,h,secs){
+  if(d>h)throw {mensaje:'La fecha inicial debe ser antes que la final.'};
+  if(dayDiff(d,h)>370)throw {mensaje:'Elija un periodo de hasta un año.'};
+  const r=await api('cargar',{tablas:['Ordeno','Jornadas','Bonos','Avances','Avisos','Pedidos','Comentarios','RutinaCheck','Tareas','Tratamientos','Visitas','Labores','Personal','Animales','Rutinas','Vehiculos'],desde:d});
+  const D=r.datos,fi=n=>(D[n]||[]);
+  const W=id=>{const w=fi('Personal').find(x=>x.id===id);return w?w.nombre:'—'};
+  const ps=l=>String(l||'').split(',').filter(Boolean).map(W).join(', ');
+  const out=[];
+  const sec=(t,html)=>out.push(`<h2 class="rh2">${t}</h2>${html}`);
+  if(secs.includes('leche')){
+    const o=fi('Ordeno').filter(e=>inR(e.fecha,d,h)).sort((a,b)=>String(a.fecha).localeCompare(String(b.fecha))||String(a.turno).localeCompare(String(b.turno)));
+    const con=o.filter(e=>e.botellas!=null),tot=con.reduce((s,e)=>s+Number(e.botellas),0);
+    const dias=[...new Set(con.map(e=>e.fecha))];
+    const porDia=dias.map(f=>{const m=con.find(e=>e.fecha===f&&e.turno==='M'),t=con.find(e=>e.fecha===f&&e.turno==='T');return [wdOf(f)+' '+fdate(f),m?m.botellas:'—',t?t.botellas:'—',(m?+m.botellas:0)+(t?+t.botellas:0)]});
+    sec('Leche y botellas ordeñadas',`<p><b>Total: ${tot} botellas</b> en ${dias.length} día${dias.length===1?'':'s'} con datos${dias.length?` · promedio ${(tot/dias.length).toFixed(1)} por día`:''}. Turnos sin dato: ${o.filter(e=>e.botellas==null&&e.estado!=='asignado').length}.</p>${tableHtml(['Día','Mañana','Tarde','Total del día'],porDia)}`);
+  }
+  if(secs.includes('ordeno')){
+    const o=fi('Ordeno').filter(e=>inR(e.fecha,d,h)).sort((a,b)=>String(a.fecha).localeCompare(String(b.fecha)));
+    const cnt={};o.forEach(e=>String(e.personal||'').split(',').filter(Boolean).forEach(p=>{cnt[p]=(cnt[p]||0)+1}));
+    const rutinas=fi('Rutinas').filter(x=>x.activa!==false),chk=fi('RutinaCheck').filter(c=>inR(c.fecha,d,h)&&c.hecho);
+    sec('Turnos de ordeño y personas',`${tableHtml(['Persona','Turnos'],Object.keys(cnt).map(p=>[esc(W(p)),cnt[p]]))}<br>${tableHtml(['Fecha','Turno','Personas','Botellas','Estado','Comentario'],o.map(e=>[fdate(e.fecha),e.turno==='M'?'Mañana':'Tarde',esc(ps(e.personal)),e.botellas==null?'—':e.botellas,esc(e.estado||''),esc(e.nota||'')]))}${rutinas.length?`<p><b>Rutinas cumplidas:</b> ${chk.length} marcadas como hechas en el periodo (${rutinas.map(x=>esc(x.titulo)).join('; ')}).</p>`:''}`);
+  }
+  if(secs.includes('vet')){
+    const tr=fi('Tratamientos').filter(t=>inR(t.fechaAplicada,d,h)||(!t.fechaAplicada&&inR(t.fechaProgramada,d,h)));
+    const vs=fi('Visitas').filter(v=>inR(v.fecha,d,h)),av=fi('Avisos').filter(a=>inR(a.fecha,d,h));
+    const hon=vs.reduce((s,v)=>s+Number(v.honorarios||0),0),ins=vs.reduce((s,v)=>s+Number(v.costoInsumos||0),0);
+    sec('Veterinario',`<h3>Tratamientos</h3>${tableHtml(['Fecha','Tratamiento','A quién','Responsable','Estado'],tr.sort((a,b)=>String(a.fechaAplicada||a.fechaProgramada).localeCompare(String(b.fechaAplicada||b.fechaProgramada))).map(t=>[fdate(t.fechaAplicada||t.fechaProgramada),esc(t.titulo)+(t.nota?'<br><small>'+esc(t.nota)+'</small>':''),esc(scopeLabel(t)),esc(t.responsable||''),t.fechaAplicada?'Aplicado':'Pendiente']))}
+    <h3>Visitas</h3>${tableHtml(['Fecha','Veterinario','Servicios','Insumos','Honorarios','Insumos $','Pago'],vs.map(v=>[fdate(v.fecha),esc(v.veterinario),esc(v.servicios),esc(v.insumos||''),money(v.honorarios),money(v.costoInsumos),v.pagado?'Pagado':'Pendiente']))}<p><b>Total veterinario:</b> ${money(hon+ins)} (honorarios ${money(hon)} + insumos ${money(ins)})</p>
+    <h3>Avisos y emergencias</h3>${tableHtml(['Fecha','Tipo','Animal','Detalle','Avisó'],av.map(a=>[fdate(a.fecha),esc(AVL[a.tipo]||a.tipo),esc(a.animal),esc(a.nota||''),esc(a.autor)]))}`);
+  }
+  if(secs.includes('horas')){
+    const j=fi('Jornadas').filter(x=>inR(x.fecha,d,h)&&x.tipo),ws=fi('Personal').filter(w=>w.activo!==false||j.some(x=>x.personalId===w.id));
+    const rows=ws.map(w=>{const l=j.filter(x=>x.personalId===w.id),c=t=>l.filter(x=>x.tipo===t).length;return [esc(w.nombre),c('D'),c('M'),c('T'),l.length?+(c('D')+(c('M')+c('T'))/2).toFixed(1):0]}).filter(r=>r[4]>0||r[1]+r[2]+r[3]>0);
+    sec('Horarios trabajados',`${tableHtml(['Trabajador','Días completos','Mañanas','Tardes','Días equivalentes'],rows)}<p style="color:#555;font-size:13px">Día equivalente: un día completo vale 1; una mañana o una tarde valen medio día.</p>`);
+  }
+  if(secs.includes('pagos')){
+    const sabs=[];for(let s=satOf(d);s<=satOf(h);s=addDays(s,7))sabs.push(s);
+    if(sabs.length>14)throw {mensaje:'Para pagos elija un periodo de hasta 14 semanas.'};
+    const filas=[],tot={};
+    for(const s of sabs){const rs=await api('resumenSemana',{semana:s});rs.resumen.forEach(x=>{if(x.total>0||x.pagado){filas.push([fdate(s),esc(x.nombre),money(x.subtotal),money(x.bonos),money(x.total),x.pagado?'Pagado':'Pendiente']);const k=x.nombre;tot[k]=tot[k]||{p:0,n:0};if(x.pagado)tot[k].p+=x.total;else tot[k].n+=x.total}})}
+    const tp=Object.values(tot).reduce((s,x)=>s+x.p,0),tn=Object.values(tot).reduce((s,x)=>s+x.n,0);
+    sec('Pagos a trabajadores',`<p>Semanas que terminan en sábado entre ${fdate(sabs[0])} y ${fdate(sabs[sabs.length-1])}. <b>Pagado: ${money(tp)}</b> · Pendiente: ${money(tn)}</p>${tableHtml(['Sábado','Trabajador','Jornadas','Bonos','Total','Estado'],filas)}<br>${tableHtml(['Trabajador','Pagado en el periodo','Pendiente'],Object.keys(tot).map(k=>[esc(k),money(tot[k].p),money(tot[k].n)]))}`);
+  }
+  if(secs.includes('act')){
+    const av=fi('Avances').filter(a=>inR(a.fecha,d,h)),ids=new Set(av.map(a=>a.tareaId));
+    const ts=fi('Tareas').filter(t=>ids.has(t.id)||tCubre(t,d)||inR(t.inicio||t.fecha,d,h)||(t.estado!=='completado'&&(t.inicio||t.fecha)<=h)).sort((a,b)=>String(a.inicio||a.fecha).localeCompare(String(b.inicio||b.fecha)));
+    const lb=fi('Labores').filter(x=>inR(x.fecha,d,h));
+    sec('Resumen de actividades',`${tableHtml(['Actividad','Lugar','Quiénes','Fechas','Estado','Qué se hizo'],ts.map(t=>[esc(t.titulo),esc(t.parcela||t.categoria||''),esc(ps(t.personas||t.personalId)),fdate(t.inicio||t.fecha)+(tFin(t)&&tFin(t)!==(t.inicio||t.fecha)?' al '+fdate(tFin(t)):''),t.estado==='completado'?'Terminada'+(t.completadoPor?' por '+esc(t.completadoPor):''):t.estado==='parcial'?'En curso':'Pendiente',av.filter(a=>a.tareaId===t.id&&a.tipo!=='correccion').map(a=>`${fdate(a.fecha)} ${esc(a.autor)}: ${esc(a.texto||'terminó la labor')}`).join('<br>')]))}${lb.length?`<h3>Labores de cultivos</h3>${tableHtml(['Fecha','Labor','Quién'],lb.map(x=>[fdate(x.fecha),esc(x.labor),esc(x.autor||'')]))}`:''}`);
+  }
+  if(secs.includes('ped')){
+    const p=fi('Pedidos').filter(x=>inR(x.fecha,d,h)).sort((a,b)=>String(a.fecha).localeCompare(String(b.fecha)));
+    const gasto=p.filter(x=>['comprado','recibido'].includes(x.estado)).reduce((s,x)=>s+Number(x.costo||0),0);
+    sec('Pedidos y compras',`<p><b>Total comprado: ${money(gasto)}</b> (pedidos comprados o recibidos con costo anotado).</p>${tableHtml(['Fecha','Pedido','Tipo','Pidió','Estado','Recibió','Costo'],p.map(x=>[fdate(x.fecha),esc(x.titulo)+(x.cantidad?' ('+esc(x.cantidad)+')':''),esc(x.tipo),esc(x.creadoPor),(PED_ESTADO[x.estado]||[x.estado])[0],esc(x.recibidoPor||''),x.costo===''||x.costo==null?'—':money(x.costo)]))}`);
+  }
+  if(secs.includes('obs')){
+    const c=fi('Comentarios').filter(x=>inR(x.fecha,d,h)).sort((a,b)=>String(a.ts).localeCompare(String(b.ts)));
+    sec('Observaciones y comentarios',`${tableHtml(['Fecha','Quién','Sobre','Comentario'],c.map(x=>[fdate(x.fecha),esc(x.autor)+' ('+esc(ROL[x.rol]||x.rol)+')',esc(x.etiqueta||x.modulo),esc(x.texto||'')+(x.fotoId?' <i>[con foto]</i>':'')]))}`);
+  }
+  showReport(`<h1 class="rh1">Reporte del ${fdatey(d)} al ${fdatey(h)}</h1>${out.join('')}`,'Reporte de la finca');
+}
+
+/* ───────── Formularios nuevos ───────── */
+Object.assign(FORMS,{
+  async comentar(d,f){
+    const foto=await leerFoto(f);
+    if(!String(d.texto||'').trim()&&!foto)throw {mensaje:'Escriba un comentario o tome una foto.'};
+    const r=await api('comentarioCrear',{modulo:f.dataset.m,refId:f.dataset.r||'',texto:d.texto||'',foto});
+    upsert('Comentarios',r.fila);if(r.foto)upsert('Fotos',r.foto);
+    if(r.foto&&foto)S.fc[r.foto.id]=foto;
+    toast('Comentario guardado');refreshSheet();
+  },
+  async fix(d,f){
+    const t=f.dataset.t,key=t==='Avisos'?'nota':'texto';
+    const r=await api('corregir',{tabla:t,id:f.dataset.id,cambios:{[key]:d.texto}});
+    upsert(t,r.fila);toast('Corregido');refreshSheet();
+  },
+  async pedido(d,f){
+    const foto=await leerFoto(f);
+    const r=await api('pedidoCrear',{tipo:d.tipo,titulo:d.titulo,detalle:d.detalle||'',cantidad:d.cantidad||'',urgencia:d.urgencia||'normal',refModulo:f.dataset.veh?'Vehiculos':'',refId:f.dataset.veh||'',foto});
+    upsert('Pedidos',r.fila);if(r.foto){upsert('Fotos',r.foto);if(foto)S.fc[r.foto.id]=foto}
+    closeSheet();render();toast('Pedido enviado');
+  },
+  async pedEdit(d,f){
+    const ch={tipo:d.tipo,titulo:d.titulo,detalle:d.detalle||'',cantidad:d.cantidad||'',urgencia:d.urgencia};
+    const r=await api('pedidoActualizar',{id:f.dataset.id,cambios:ch});upsert('Pedidos',r.fila);closeSheet();render();toast('Pedido corregido');
+  },
+  async pedResp(d,f){
+    const ch={estado:d.estado,respuesta:d.respuesta||''};if(isAdmin()&&d.costo!=='')ch.costo=Number(d.costo);
+    const r=await api('pedidoActualizar',{id:f.dataset.id,cambios:ch});upsert('Pedidos',r.fila);closeSheet();render();toast('Pedido actualizado');
+  },
+  async veh(d,f){
+    const dt={nombre:d.nombre,tipo:d.tipo,placa:d.placa||'',estado:d.estado,proximaRevision:d.proximaRevision||'',nota:d.nota||''};
+    if(f.dataset.id)await upd('Vehiculos',f.dataset.id,dt);else await add('Vehiculos',Object.assign(dt,{activo:true}));
+    closeSheet();render();toast('Vehículo guardado');
+  },
+  async parcela(d,f){
+    const dt={nombre:d.nombre.trim(),uso:d.uso,area:d.area===''?'':Number(d.area),unidad:d.unidad,descripcion:d.descripcion||'',notas:d.notas||'',activo:d.activa==='1'};
+    if(f.dataset.id){await upd('Parcelas',f.dataset.id,dt);const fresh=await api('cargar',{tablas:['Tareas','Cultivos']});S.d.Tareas=fresh.datos.Tareas||S.d.Tareas;S.d.Cultivos=fresh.datos.Cultivos||S.d.Cultivos}
+    else await add('Parcelas',Object.assign(dt,{activo:true}));
+    closeSheet();render();toast('Parcela guardada');
+  },
+  async rutinaNueva(d){await add('Rutinas',{titulo:d.titulo,ambito:d.ambito,activa:true,notas:''});ACTS.rutinas();toast('Rutina agregada')},
+  async baja(d,f){
+    const id=f.dataset.id;
+    await upd('Animales',id,{activo:false,bajaFecha:d.fecha,bajaMotivo:d.motivo,bajaNota:d.nota||''});
+    await hist(id,`Baja (${d.motivo}) el ${fdate(d.fecha)}${d.nota?': '+d.nota:''}`);
+    closeSheet();render();toast('Animal dado de baja');
+  },
+  async emergencia(d,f){
+    if(!String(d.paso||'').trim()&&!String(d.dado||'').trim())throw {mensaje:'Cuente qué ocurrió y qué se le dio.'};
+    const foto=await leerFoto(f),a=d.animalId?T('Animales').find(x=>x.id===d.animalId):null;
+    const resumen=`Ocurrió: ${d.paso}. Se le dio: ${d.dado||'—'}. Tratamiento: ${d.trat||'—'}.`;
+    let trId='';
+    if(a){
+      const t=await add('Tratamientos',{titulo:'Emergencia: '+String(d.paso).slice(0,50),alcance:'animal',objetivo:a.id,fechaProgramada:today(),fechaAplicada:today(),responsable:S.user.nombre,nota:`Se le dio: ${d.dado||'—'}. Tratamiento: ${d.trat||'—'}.`});
+      trId=t.id;await hist(a.id,'Emergencia. '+resumen);
+    }
+    await add('Avisos',{fecha:today(),turno:'',animal:a?a.nombre+' #'+a.numero:(d.otro||'Varios animales'),animalId:a?a.id:'',tipo:'emergencia',nota:resumen,estado:'atendido',atendidoPor:S.user.nombre,atendidoFecha:today()});
+    if(foto){const r=await api('comentarioCrear',{modulo:trId?'Tratamientos':'General',refId:trId,texto:'Emergencia: '+d.paso,foto});upsert('Comentarios',r.fila);if(r.foto){upsert('Fotos',r.foto);S.fc[r.foto.id]=foto}}
+    closeSheet();render();toast('Emergencia registrada');
+  },
+  async reporte(d,f){
+    const secs=new FormData(f).getAll('sec');if(!secs.length)throw {mensaje:'Elija al menos una sección.'};
+    S.rp.s=secs;if(S.rp.p==='otro'){S.rp.d=d.d;S.rp.h=d.h}
+    await generarReporte(d.d,d.h,secs);
+  }
+});
+
+/* ───────── Acciones nuevas ───────── */
+const pedForm=(p,veh)=>{
+  const tipos=pedTipos();
+  return `<div class="field"><label for="f-pt">Qué hace falta</label><input id="f-pt" name="titulo" required maxlength="120" value="${esc(p&&p.titulo)}" placeholder="Ej. Jabón para lavar los barriles"></div>
+  <div class="row2"><div class="field"><label for="f-ptp">Tipo</label><select id="f-ptp" name="tipo">${opts(tipos.concat(p&&!tipos.includes(p.tipo)?[p.tipo]:[]).map(x=>[x,x]),p?p.tipo:tipos[0])}</select></div><div class="field"><label for="f-pq">Cantidad</label><input id="f-pq" name="cantidad" maxlength="60" value="${esc(p&&p.cantidad)}" placeholder="Ej. 3 frascos"></div></div>
+  <div class="field"><label for="f-pu">Urgencia</label><select id="f-pu" name="urgencia">${opts([['normal','Normal'],['urgente','Urgente']],p?p.urgencia:'normal')}</select></div>
+  <div class="field"><label for="f-pd">Detalle</label><textarea id="f-pd" name="detalle" maxlength="500" placeholder="Marca, medida, para qué se necesita…">${esc(p&&p.detalle)}</textarea></div>`;
+};
+const fixForm=(t,id)=>{
+  const r=T(t).find(x=>x.id===id);if(!r)return;
+  const val=t==='Avisos'?r.nota:r.texto;
+  openSheet(sheetTop('Corregir')+`<form data-form="fix" data-t="${t}" data-id="${esc(id)}"><div class="field"><label for="f-fx">Texto</label><textarea id="f-fx" name="texto" maxlength="500">${esc(val)}</textarea><small>Puede corregir lo que escribió durante 24 horas. Después solo un administrador.</small></div><button class="btn" type="submit">Guardar corrección</button></form>`);
+};
+Object.assign(ACTS,{
+  lbclose:()=>{const e=$('#lb');if(e)e.remove()},
+  verfoto:el=>act(async()=>{const s=await getFoto(el.dataset.id);const f=T('Fotos').find(x=>x.id===el.dataset.id);showLb(s,f?`${fdatey(f.fecha)} · ${f.autor||''}${f.descripcion?' · '+f.descripcion:''}`:'')}),
+  comentar:el=>{
+    const m=el.dataset.m,r=el.dataset.r||'',tit=m==='General'?'Reportar algo':'Comentar';
+    openSheet(sheetTop(tit)+`<form data-form="comentar" data-m="${m}" data-r="${esc(r)}"><div class="field"><label for="f-ct">${m==='General'?'¿Qué quiere avisar o dejar anotado?':'Comentario'}</label><textarea id="f-ct" name="texto" maxlength="500" placeholder="Ej. Se rompió una manguera"></textarea></div>${fotoField('f-cf')}<button class="btn" type="submit">Guardar</button></form>`);
+  },
+  fix:el=>fixForm(el.dataset.t,el.dataset.id),
+  sugName:el=>{const i=el.closest('form').querySelector('[name="nombre"]');if(i){i.value=el.dataset.n;i.focus()}},
+  pf:el=>{S.pf=el.dataset.k;render()},
+  newPedido:el=>{const veh=el&&el.dataset?el.dataset.veh:'';openSheet(`${sheetTop('Nuevo pedido')}<form data-form="pedido" ${veh?`data-veh="${esc(veh)}"`:''}>${veh?`<p style="margin:0 0 10px;font-weight:700">Para: ${esc(vehName(veh))}</p>`:''}${pedForm(null)}${fotoField('f-pf')}<button class="btn" type="submit">Enviar pedido</button></form>`)},
+  pedEdit:el=>{const p=T('Pedidos').find(x=>x.id===el.dataset.id);openSheet(formWrap('Corregir pedido','pedEdit',pedForm(p),p.id,'Guardar corrección'))},
+  pedResp:el=>{const p=T('Pedidos').find(x=>x.id===el.dataset.id);openSheet(formWrap('Responder pedido','pedResp',`<p style="margin:0 0 10px;font-weight:700">${esc(p.titulo)}${p.cantidad?' ('+esc(p.cantidad)+')':''} · pidió ${esc(p.creadoPor)}</p>
+    <div class="field"><label for="f-pe">Estado</label><select id="f-pe" name="estado">${opts([['aprobado','Aprobado, se va a comprar'],['comprado','Ya se compró'],['recibido','Ya llegó'],['rechazado','No se aprueba'],['pendiente','Dejar pendiente']],p.estado==='pendiente'?'aprobado':p.estado)}</select></div>
+    <div class="field"><label for="f-pr">Respuesta</label><textarea id="f-pr" name="respuesta" maxlength="300">${esc(p.respuesta)}</textarea></div>
+    ${isAdmin()?`<div class="field"><label for="f-pc">Costo ($)</label><input id="f-pc" name="costo" type="number" min="0" step="0.01" value="${p.costo===''||p.costo==null?'':p.costo}"><small>Solo los administradores ven el costo.</small></div>`:''}`,p.id))},
+  pedRecibido:el=>act(async()=>{const r=await api('pedidoActualizar',{id:el.dataset.id,cambios:{estado:'recibido'}});upsert('Pedidos',r.fila);render();toast('Pedido recibido')}),
+  newVeh:()=>openSheet(formWrap('Nuevo vehículo','veh',vehFields(null))),
+  editVeh:el=>{const v=T('Vehiculos').find(x=>x.id===el.dataset.id);openSheet(formWrap('Vehículo: '+esc(v.nombre),'veh',vehFields(v),v.id))},
+  vehBase:()=>act(async()=>{for(const [n,t] of [['Camión','Camión'],['Moto','Moto'],['Moto con cama','Moto con cama']])await add('Vehiculos',{nombre:n,tipo:t,estado:'Operativo',activo:true});render();toast('Vehículos agregados')}),
+  parcela:el=>parcelaSheet(el.dataset.id),
+  newParcela:()=>openSheet(formWrap('Nueva parcela','parcela',parcelaFields(null))),
+  editParcela:el=>{const p=T('Parcelas').find(x=>x.id===el.dataset.id);openSheet(formWrap('Perfil de '+esc(p.nombre),'parcela',parcelaFields(p),p.id))},
+  rutina:el=>act(async()=>{const r=await api('rutinaMarcar',{rutinaId:el.dataset.r,fecha:el.dataset.f,turno:el.dataset.t,hecho:el.dataset.h==='1'});upsert('RutinaCheck',r.fila);render();toast(el.dataset.h==='1'?'Anotado':'Desmarcado')}),
+  rutinas:()=>{
+    openSheet(sheetTop('Rutinas')+`<div class="list" style="margin-bottom:12px">${T('Rutinas').map(r=>`<div class="item"><div class="item-main"><div class="t" style="font-weight:600">${esc(r.titulo)}${pill(r.ambito==='ordeno'?'En cada turno de ordeño':'Todos los días','n')}${r.activa===false?pill('Pausada','warn'):''}</div></div><button class="btn sm alt" data-act="rutinaToggle" data-id="${esc(r.id)}">${r.activa===false?'Activar':'Pausar'}</button></div>`).join('')||'<div class="item muted">Todavía no hay rutinas.</div>'}</div>
+    <form data-form="rutinaNueva"><div class="field"><label for="f-rt">Nueva rutina</label><input id="f-rt" name="titulo" required maxlength="100" placeholder="Ej. Lavar los barriles y utensilios"></div><div class="field"><label for="f-ra">Cuándo</label><select id="f-ra" name="ambito">${opts([['ordeno','En cada turno de ordeño (la hace quien ordeña)'],['diaria','Todos los días']])}</select></div><button class="btn" type="submit">Agregar rutina</button></form>`);
+  },
+  rutinaToggle:el=>act(async()=>{const r=T('Rutinas').find(x=>x.id===el.dataset.id);await upd('Rutinas',r.id,{activa:r.activa===false});ACTS.rutinas()}),
+  baja:el=>{openSheet(formWrap('Dar de baja','baja',`<p style="margin:0 0 10px;font-weight:700">${esc((T('Animales').find(x=>x.id===el.dataset.id)||{}).nombre||'')}</p>
+    <div class="row2"><div class="field"><label for="f-bd">Fecha de la baja</label><input id="f-bd" name="fecha" type="date" value="${today()}" max="${today()}" required></div><div class="field"><label for="f-bm">Motivo</label><select id="f-bm" name="motivo">${opts(['Venta','Muerte','Traslado','Otro'].map(x=>[x,x]))}</select></div></div>
+    <div class="field"><label for="f-bn">Comentario</label><textarea id="f-bn" name="nota" maxlength="300" placeholder="Ej. Vendida a un vecino"></textarea><small>Se oculta de las listas y conserva todo su historial.</small></div>`,el.dataset.id,'Dar de baja'))},
+  reactivar:el=>act(async()=>{await upd('Animales',el.dataset.id,{activo:true,bajaFecha:'',bajaMotivo:'',bajaNota:''});await hist(el.dataset.id,'Reactivado en el corral');render();animalSheet(el.dataset.id);toast('Animal reactivado')}),
+  ficha:el=>fichaAnimal(el.dataset.id),
+  repPrint:()=>window.print(),
+  repClose:()=>{$('#rep').hidden=true;$('#rep').innerHTML='';document.body.classList.remove('repOpen')},
+  rpp:el=>{S.rp.p=el.dataset.k;render()},
+  newEmerg:()=>openSheet(formWrap('Informar una emergencia','emergencia',`<div class="field"><label for="f-ea">Animal</label><select id="f-ea" name="animalId"><option value="">Otro o varios animales</option>${animals().map(a=>`<option value="${esc(a.id)}">${esc(a.nombre)} #${esc(a.numero)}</option>`).join('')}</select></div>
+    <div class="field"><label for="f-eo">Si no está en la lista</label><input id="f-eo" name="otro" maxlength="80" placeholder="Ej. Dos terneros del potrero norte"></div>
+    <div class="field"><label for="f-ep">¿Qué ocurrió?</label><textarea id="f-ep" name="paso" required maxlength="300"></textarea></div>
+    <div class="field"><label for="f-ed">¿Qué se le dio?</label><textarea id="f-ed" name="dado" maxlength="300" placeholder="Medicamento y cantidad"></textarea></div>
+    <div class="field"><label for="f-et">¿Qué tratamiento se realizó?</label><textarea id="f-et" name="trat" maxlength="300"></textarea></div>${fotoField('f-ef')}`,'','Guardar emergencia')),
+  newPedVet:()=>ACTS.newPedido({dataset:{}}),
+  tdeshacer:el=>act(async()=>{const r=await api('tratamientoRevertir',{id:el.dataset.id});upsert('Tratamientos',r.fila);render();toast('Tratamiento devuelto a pendiente')}),
+  reabrir:el=>act(async()=>{const r=await api('tareaReabrir',{id:el.dataset.id});upsert('Tareas',r.tarea);upsert('Avances',r.fila);render();toast('Labor reabierta')})
+});
+const vehFields=v=>`<div class="field"><label for="f-vn">Nombre</label><input id="f-vn" name="nombre" required maxlength="60" value="${esc(v&&v.nombre)}"></div>
+  <div class="row2"><div class="field"><label for="f-vt">Tipo</label><select id="f-vt" name="tipo">${opts(['Camión','Moto','Moto con cama','Otro'].map(x=>[x,x]),v&&v.tipo)}</select></div><div class="field"><label for="f-vp">Placa</label><input id="f-vp" name="placa" maxlength="20" value="${esc(v&&v.placa)}"></div></div>
+  <div class="row2"><div class="field"><label for="f-vs">Estado</label><select id="f-vs" name="estado">${opts(['Operativo','Con falla','En revisión','En taller'].map(x=>[x,x]),v?v.estado:'Operativo')}</select></div><div class="field"><label for="f-vr">Próxima revisión</label><input id="f-vr" name="proximaRevision" type="date" value="${esc(v&&v.proximaRevision)}"></div></div>
+  <div class="field"><label for="f-vo">Nota</label><textarea id="f-vo" name="nota" maxlength="300">${esc(v&&v.nota)}</textarea></div>`;
+const parcelaFields=p=>`<div class="field"><label for="f-pn">Nombre de la parcela o cerco</label><input id="f-pn" name="nombre" required maxlength="60" value="${esc(p&&p.nombre)}"></div>
+  <div class="row2"><div class="field"><label for="f-pu2">Para qué se usa</label><select id="f-pu2" name="uso">${opts(Object.keys(usoL).map(k=>[k,usoL[k]]),p&&p.uso)}</select></div><div class="field"><label for="f-pa">Tamaño</label><div style="display:flex;gap:6px"><input id="f-pa" name="area" type="number" min="0" step="0.01" value="${p&&p.area!==''&&p.area!=null?p.area:''}" style="flex:1;min-width:0"><select name="unidad" aria-label="Unidad" style="width:auto">${opts([['mz','manzanas'],['ha','hectáreas'],['m2','m²']],p&&p.unidad||'mz')}</select></div></div></div>
+  <div class="field"><label for="f-pds">Qué hay ahí</label><textarea id="f-pds" name="descripcion" maxlength="300" placeholder="Ej. Pasto estrella, 12 vacas en rotación">${esc(p&&p.descripcion)}</textarea></div>
+  <div class="field"><label for="f-pno">Notas de seguimiento</label><textarea id="f-pno" name="notas" maxlength="300">${esc(p&&p.notas)}</textarea></div>
+  ${p?`<div class="field"><label for="f-pac">Estado</label><select id="f-pac" name="activa">${opts([['1','En uso'],['0','Ya no se usa']],p.activo===false?'0':'1')}</select></div>`:'<input type="hidden" name="activa" value="1">'}`;
+
+document.addEventListener('change',e=>{
+  const t=e.target;if(!t||!t.dataset)return;
+  if(t.dataset.foto!==undefined){const s=t.closest('.field').querySelector('.fotoInfo');if(s)s.textContent=t.files[0]?'Foto lista: '+t.files[0].name:'Sin foto (opcional)'}
+  const f=t.closest&&t.closest('form[data-form="newAnimal"]');if(f&&/^(madreId|padreId|sexo|tipo)$/.test(t.name))refreshSugs(f);
+});
+document.addEventListener('input',e=>{const f=e.target.closest&&e.target.closest('form[data-form="newAnimal"]');if(f&&/^(madreTexto|padreTexto)$/.test(e.target.name))refreshSugs(f)});
+
+{const _nt=ACTS.newTask;ACTS.newTask=el=>{_nt(el);const pp=el&&el.dataset&&el.dataset.parcela;if(pp){const i=$('#f-parc');if(i)i.value=pp}}}
 
 /* ───────── Arranque ───────── */
 (async function init(){

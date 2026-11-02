@@ -1,6 +1,6 @@
 // Guarda las pantallas de la app para que abran aunque la señal sea mala.
 // Los datos de la finca nunca se guardan aquí: siempre se piden al servidor.
-const CACHE = 'corral-v1';
+const CACHE = 'corral-v5';
 const ARCHIVOS = ['./', './index.html', './config.js', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', function (e) {
