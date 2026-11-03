@@ -123,6 +123,7 @@ th.sat{color:var(--gold-ink)}
 .cell{min-width:52px;min-height:44px;border:2px solid var(--line);background:var(--surface-2);border-radius:8px;padding:6px 4px;font-weight:700;font-size:13px}
 .cell.M,.cell.T{background:var(--warn-soft);color:var(--warn);border-color:transparent}
 .cell.D{background:var(--ok-soft);color:var(--ok);border-color:transparent}
+.avatar.pf{padding:0;overflow:hidden}.avatar.pf img{width:100%;height:100%;object-fit:cover}.avatar.big{width:88px;height:88px;font-size:22px}.frow{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}.fslot{margin:0 0 12px;padding:8px;border:2px dashed var(--line);border-radius:8px}.fprev{font-size:13px;color:var(--muted);min-height:16px}
 .avatar{width:42px;height:42px;border-radius:8px;display:grid;place-items:center;font-family:var(--display);font-weight:700;background:var(--gold-soft);color:var(--gold-ink);flex:none}
 .kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0}
 .kv dt{color:var(--muted);font-size:14px}.kv dd{margin:0;font-weight:600}
@@ -235,7 +236,7 @@ const MODS=[
  {id:'parcelas',name:'Parcelas y cercos',icon:'map',roles:OPS},
  {id:'cultivos',name:'Cultivos',icon:'leaf',roles:OPS},
  {id:'vehiculos',name:'Vehículos',icon:'truck',roles:TODOSR},
- {id:'equipos',name:'Equipos',icon:'wrench',roles:OPS},
+ {id:'equipos',name:'Maquinaria y equipos',icon:'wrench',roles:OPS.concat(['mecanico'])},
  {id:'pedidos',name:'Pedidos',icon:'cart',roles:TODOSR},
  {id:'reportes',name:'Reportes',icon:'doc',roles:['admin']},
  {id:'alertas',name:'Alertas',icon:'bell',roles:TODOSR},
@@ -244,11 +245,11 @@ const MODS=[
 ];
 const modName=m=>m.id==='personal'&&S.user&&S.user.rol==='admin'?'Personal y pagos':m.name;
 
-const TABS_VET=['Grupos','Animales','Historial','Tratamientos','Fotos','Avisos','Comentarios','Pedidos','Vehiculos'];
-const TABS_OPS=['Grupos','Animales','Historial','Tratamientos','Fotos','Avisos','Avances','Visitas','Ordeno','Personal','Jornadas','Tareas','Cultivos','Labores','Equipos','Comentarios','Pedidos','Vehiculos','Parcelas','Rutinas','RutinaCheck'];
+const TABS_VET=['Grupos','Animales','Historial','Tratamientos','Fotos','Avisos','Comentarios','Pedidos','Vehiculos','Reproduccion'];
+const TABS_OPS=['Grupos','Animales','Historial','Tratamientos','Fotos','Avisos','Avances','Visitas','Ordeno','Personal','Jornadas','Tareas','Cultivos','Labores','Equipos','Comentarios','Pedidos','Vehiculos','Parcelas','Rutinas','RutinaCheck','Reproduccion'];
 const TABS_ADMIN=TABS_OPS.concat(['Tarifas','Bonos']);
 const TABS_MOZO=['Ordeno','Tareas','Avances','Fotos','Comentarios','Pedidos','Vehiculos','Rutinas','RutinaCheck'];
-const TABS_MEC=['Vehiculos','Comentarios','Pedidos','Fotos'];
+const TABS_MEC=['Vehiculos','Equipos','Comentarios','Pedidos','Fotos'];
 const TABS_FULL=['Fotos','Comentarios','Pedidos'];
 
 const S={token:store.get('corral-token')||'',user:null,view:'inicio',d:{},loaded:0,fg:'todos',q:'',vetTab:'trat',fc:{},pTab:'jor',tf:'todas',cf:'todos',
@@ -291,6 +292,7 @@ async function cargarTodo(){
   const tablas=isAdmin()?TABS_ADMIN:canOps()?TABS_OPS:isVet()?TABS_VET:S.user.rol==='mecanico'?TABS_MEC:TABS_MOZO;
   const [r,r2]=await Promise.all([api('cargar',{tablas:tablas.filter(t=>!TABS_FULL.includes(t)),desde:addDays(today(),-70)}),api('cargar',{tablas:tablas.filter(t=>TABS_FULL.includes(t))})]);
   S.d=Object.assign({},r.datos,r2.datos);tablas.forEach(t=>{if(!S.d[t])S.d[t]=[]});S.loaded=Date.now();
+  if(S.user.rol==='mozo'){try{S.vacas=(await api('vacasOrdeno')).vacas||[]}catch(e){S.vacas=S.vacas||[]}}
 }
 function deviceName(){
   const ua=navigator.userAgent||'';
@@ -352,13 +354,20 @@ const parentOpts=(kinds,sel,selfId)=>`<option value="">No registrado en la lista
 const parentFields=(a)=>`<div class="row2"><div class="field"><label for="f-ma">Madre</label><select id="f-ma" name="madreId">${parentOpts(MADRES,a&&a.madreId,a&&a.id)}</select></div><div class="field"><label for="f-pa">Padre</label><select id="f-pa" name="padreId">${parentOpts(PADRES,a&&a.padreId,a&&a.id)}</select></div></div>
   <div class="row2"><div class="field"><label for="f-mat">Madre (si no está en la lista)</label><input id="f-mat" name="madreTexto" maxlength="80" value="${esc(a&&a.madreTexto)}"></div><div class="field"><label for="f-pat">Padre (si no está en la lista)</label><input id="f-pat" name="padreTexto" maxlength="80" value="${esc(a&&a.padreTexto)}"></div></div>`;
 const parentOf=(id,texto)=>{const p=id?T('Animales').find(x=>x.id===id):null;return p?`<button class="btn sm alt" data-act="animal" data-id="${esc(p.id)}">${esc(p.nombre)} #${esc(p.numero)}</button>`:(texto?esc(texto):'—')};
-const AVL={garrapatas:'Garrapatas',inflamacion:'Inflamación',cojera:'Cojera',herida:'Herida',otro:'Otro problema',emergencia:'Emergencia'};
+const AVL={garrapatas:'Garrapatas',inflamacion:'Inflamación',cojera:'Cojera',herida:'Herida',otro:'Otro problema',emergencia:'Emergencia',celo:'Celo'};
 const tarifaActual=tipo=>{const l=T('Tarifas').filter(x=>x.tipo===tipo&&!x.personalId&&x.desde<=today()).sort((a,b)=>a.desde<b.desde?-1:a.desde>b.desde?1:0);return l.length?l[l.length-1]:null};
 
 function alertsFor(){
   const out=[],u=S.user,td=today(),ops=!['mozo','veterinario','mecanico'].includes(u.rol),vt=u.rol==='veterinario';
   const add=(mod,level,text)=>out.push({mod,level,text});
   if(ops)animals().forEach(a=>{const o=ordInfo(a);if(o&&o.cls!=='ok')add('ordeno',o.cls,`${a.nombre} (#${a.numero}): ${lc(o.txt)}, fecha ${fdate(a.ordenoHasta)}.`)});
+  if(ops||vt)animals().forEach(a=>{
+    const c=cambioGrupo(a);if(ops&&c&&c.dias<=15)add('ganado',c.dias<=0?'bad':'warn',`${a.nombre} (#${a.numero}) ${c.dias<=0?'ya toca pasar':'pasa en '+c.dias+' días'} de ${c.de.nombre} a ${c.a.nombre}.`);
+    const r=reproEstado(a);if(!r)return;
+    if(r.k==='servida'&&r.revisar<=addDays(td,2)&&dayDiff(r.base,td)<=30)add('ganado','warn',`${a.nombre} (#${a.numero}): revisar si repitió celo (servida el ${fdate(r.base)}).`);
+    if((r.k==='prenez'||r.k==='servida')&&r.dias<=15)add('ganado',r.dias<0?'bad':'warn',`${a.nombre} (#${a.numero}): parto probable ${r.dias<0?'pasó hace '+(-r.dias)+' días':r.dias===0?'hoy':'en '+r.dias+' días'}.`);
+    if(r.k==='celo'&&dayDiff(r.fecha,td)<=2)add('ganado','warn',`${a.nombre} (#${a.numero}) está en celo (${fdate(r.fecha)}).`);
+  });
   if(ops||vt){
     T('Avisos').filter(a=>a.estado==='nuevo').forEach(a=>add('vet','bad',`Aviso del ordeño: ${AVL[a.tipo]||a.tipo} en ${a.animal}. Avisó ${a.autor}.`));
     T('Tratamientos').forEach(t=>{const s=tstatus(t);
@@ -397,8 +406,8 @@ V.mas=()=>`<div class="pagehead"><h1>Todos los módulos</h1></div><div class="gr
 V.ganado=()=>{
   const l=animals();
   const chips=[['todos','Todos',l.length],...T('Grupos').filter(g=>g.activo!==false).map(g=>[g.id,g.nombre,l.filter(a=>a.grupoId===g.id).length])];if(!isVet())chips.push(['baja','De baja',T('Animales').filter(a=>a.activo===false).length]);
-  return `<div class="pagehead"><div><h1>Ganado</h1><p>${l.length} animales registrados. Capacidad de referencia: 200.</p></div>${isVet()?'':'<button class="btn" data-act="newAnimal">Nuevo animal</button>'}</div>
-  <div class="chips">${chips.map(c=>`<button class="${S.fg===c[0]?'on':''}" data-act="fg" data-k="${esc(c[0])}">${esc(c[1])} · ${c[2]}</button>`).join('')}</div>
+  return `<div class="pagehead"><div><h1>Ganado</h1><p>${l.length} animales registrados. Capacidad de referencia: 200.</p></div><div class="toolbar" style="margin:0">${isAdmin()?'<button class="btn alt sm" data-act="reglasEdad">Reglas por edad</button>':''}${isVet()?'':'<button class="btn" data-act="newAnimal">Nuevo animal</button>'}</div></div>
+  ${ganadoCards()}<div class="chips">${chips.map(c=>`<button class="${S.fg===c[0]?'on':''}" data-act="fg" data-k="${esc(c[0])}">${esc(c[1])} · ${c[2]}</button>`).join('')}</div>
   <div class="toolbar"><input class="input grow" id="q" type="search" placeholder="Buscar por nombre o número" value="${esc(S.q)}" aria-label="Buscar animal"></div>
   <div class="list" id="glist">${animalRows()}</div>`;
 };
@@ -409,7 +418,7 @@ function animalRows(){
   return l.sort((a,b)=>String(a.numero).localeCompare(String(b.numero),'es',{numeric:true})).map(a=>{
     const pend=T('Tratamientos').some(t=>!t.fechaAplicada&&['Vencido','Pendiente'].includes(tstatus(t))&&(t.alcance==='todo'||(t.alcance==='grupo'&&t.objetivo===a.grupoId)||(t.alcance==='animal'&&t.objetivo===a.id)));
     const o=ordInfo(a);
-    return `<button class="item click" data-act="animal" data-id="${esc(a.id)}"><div class="avatar">${esc(String(a.numero).slice(0,3))}</div><div class="item-main"><div class="t">${esc(a.nombre)}${pend?pill('Tratamiento por aplicar','warn'):''}${o&&o.cls!=='ok'?pill(o.short,o.cls):''}</div><div class="sub">#${esc(a.numero)} · ${esc(a.tipo)} · ${esc(gname(a.grupoId))}</div></div></button>`;
+    return `<button class="item click" data-act="animal" data-id="${esc(a.id)}">${avatar('Animales',a.id,String(a.numero).slice(0,3))}<div class="item-main"><div class="t">${esc(a.nombre)}${pend?pill('Tratamiento por aplicar','warn'):''}${o&&o.cls!=='ok'?pill(o.short,o.cls):''}${(()=>{const r=reproEstado(a),c=cambioGrupo(a);return (r&&['prenez','servida','celo'].includes(r.k)?pill(r.txt,r.cls):'')+(c&&c.dias<=15?pill(c.dias<=0?'Cambio de grupo':'Cambio en '+c.dias+' d','warn'):'')})()}</div><div class="sub">#${esc(a.numero)} · ${esc(a.tipo)} · ${esc(gname(a.grupoId))}${a.nacimiento?' · '+esc(edadTxt(a)):''}</div></div></button>`;
   }).join('');
 }
 function animalSheet(id){
@@ -420,15 +429,18 @@ function animalSheet(id){
   const ord=!vt&&!baja&&a.tipo==='Vaca'?`<div class="lbl" style="margin:14px 0 6px">Ordeño</div><div class="card" style="padding:10px 12px"><div class="sub">${a.ordenoDesde?'Ordeña desde el '+fdatey(a.ordenoDesde):'Sin fecha de inicio'} · ${a.ordenoHasta?'reposo el '+fdatey(a.ordenoHasta):'sin fecha de reposo'}</div>${o?`<div style="margin-top:6px">${pill(o.txt,o.cls)}</div>`:''}<button class="btn sm alt" style="margin-top:8px" data-act="ordEdit" data-id="${esc(a.id)}">Cambiar fechas</button></div>`:'';
   openSheet(sheetTop(`${esc(a.nombre)} · #${esc(a.numero)}`)+`
   ${baja?`<div class="errbox">De baja el ${fdatey(a.bajaFecha)} · ${esc(a.bajaMotivo||'sin motivo')}${a.bajaNota?'. '+esc(a.bajaNota):''}${!vt?`<div style="margin-top:8px"><button class="btn sm alt" data-act="reactivar" data-id="${esc(a.id)}">Reactivar</button></div>`:''}</div>`:''}
-  <dl class="kv"><dt>Tipo</dt><dd>${esc(a.tipo)}${a.sexo?' · '+(a.sexo==='H'?'Hembra':'Macho'):''}</dd><dt>Grupo</dt><dd>${esc(gname(a.grupoId))}</dd><dt>Ingreso o nacimiento</dt><dd>${fdatey(a.fechaIngreso)}</dd><dt>En este grupo desde</dt><dd>${fdatey(a.grupoDesde)}</dd>${crias.length?`<dt>Crías (${crias.length})</dt><dd style="display:flex;flex-wrap:wrap;gap:6px">${crias.map(c=>`<button class="btn sm alt" data-act="animal" data-id="${esc(c.id)}">${esc(c.nombre)} #${esc(c.numero)}</button>`).join('')}</dd>`:''}</dl>
+  <div style="display:flex;gap:12px;align-items:center;margin-bottom:10px">${avatar('Animales',a.id,String(a.numero).slice(0,3),'big')}<div>${pill(baja?'De baja':'Activo',baja?'bad':'ok')}</div></div>
+  <dl class="kv"><dt>Tipo</dt><dd>${esc(a.tipo)}${a.sexo?' · '+(a.sexo==='H'?'Hembra':'Macho'):''}</dd><dt>Grupo</dt><dd>${esc(gname(a.grupoId))}</dd><dt>Ingreso o nacimiento</dt><dd>${fdatey(a.fechaIngreso)}</dd><dt>En este grupo desde</dt><dd>${fdatey(a.grupoDesde)}</dd><dt>Edad</dt><dd>${esc(edadTxt(a))}</dd>${a.nacimiento?`<dt>Nacimiento${a.nacEstimado?' (aprox.)':''}</dt><dd>${fdatey(a.nacimiento)}</dd>`:''}${(()=>{const c=cambioGrupo(a);return c?`<dt>Cambio de grupo</dt><dd>${c.dias<=0?'Ya toca':'En '+c.dias+' días'} → ${esc(c.a.nombre)} (${fdate(c.due)})</dd>`:''})()}${specRow('Raza',a.raza)}${specRow('Color',a.color)}${specRow('Peso',a.peso!==''&&a.peso!=null?a.peso+' kg':'')}${specRow('Fierro',a.fierro)}${crias.length?`<dt>Crías (${crias.length})</dt><dd style="display:flex;flex-wrap:wrap;gap:6px">${crias.map(c=>`<button class="btn sm alt" data-act="animal" data-id="${esc(c.id)}">${esc(c.nombre)} #${esc(c.numero)}</button>`).join('')}</dd>`:''}</dl>
   <div class="lbl" style="margin:14px 0 4px">Antecedentes</div>${genHtml(a)}
   ${a.observaciones?`<div class="note" style="margin-top:10px;background:var(--surface-2);border-radius:6px;padding:8px">${esc(a.observaciones)}</div>`:''}
+  ${a.especificaciones?`<div class="note" style="margin-top:10px;background:var(--surface-2);border-radius:6px;padding:8px"><b>Especificaciones:</b> ${esc(a.especificaciones)}</div>`:''}
   ${ord}
-  <div class="toolbar" style="margin-top:12px">${vt?'':`<button class="btn sm alt" data-act="editAnimal" data-id="${esc(a.id)}">Editar datos</button>`}${isAdmin()?`<button class="btn sm" data-act="ficha" data-id="${esc(a.id)}">Generar ficha</button>`:''}</div>
+  ${baja?'':reproCard(a)}
+  <div class="toolbar" style="margin-top:12px">${vt?'':`<button class="btn sm alt" data-act="editAnimal" data-id="${esc(a.id)}">Editar datos</button>`}${canOps()?`<button class="btn sm" data-act="ficha" data-id="${esc(a.id)}">Generar ficha</button>`:''}</div>
   <div class="lbl" style="margin:14px 0 6px">Historial</div>
   <div class="list" style="margin-bottom:14px">${hist.map(h=>`<div class="item"><div class="item-main"><div class="t" style="font-weight:500">${esc(h.t)}</div><div class="sub">${fdate(h.d)} · ${esc(h.by||'')}</div></div>${h.id?fixBtn('Historial',h.id,h.by,h.ts):''}</div>`).join('')||'<div class="item muted">Sin registros todavía.</div>'}</div>
   ${cmtBlock('Animales',a.id,0,'Comentarios con foto')}
-  ${fotosHtml(a)}
+  ${galeriaHtml('Animales',a.id)}
   ${baja?'':`<form data-form="followUp" data-id="${esc(a.id)}" style="margin-top:16px;border-top:2px solid var(--line);padding-top:14px"><div class="lbl" style="margin-bottom:6px">Programar seguimiento</div><div class="row2"><div class="field"><label for="f-fu-d">Fecha</label><input id="f-fu-d" name="fecha" type="date" min="${today()}" required></div><div class="field"><label for="f-fu-t">Qué se revisa</label><input id="f-fu-t" name="titulo" required maxlength="70" placeholder="Ej. Revisar pezuña"></div></div><button class="btn alt" type="submit">Programar seguimiento</button></form>`}
   ${vt||baja?'':`<form data-form="regroup" data-id="${esc(a.id)}" style="margin-top:16px;border-top:2px solid var(--line);padding-top:14px"><div class="field"><label for="f-g">Cambiar de grupo</label><select id="f-g" name="grupoId">${opts(T('Grupos').filter(g=>g.activo!==false).map(g=>[g.id,g.nombre]),a.grupoId)}</select><small>Al cambiar de grupo no se le atribuyen los tratamientos anteriores del grupo nuevo.</small></div><button class="btn alt" type="submit">Mover</button></form>
   <div style="margin-top:16px;border-top:2px solid var(--line);padding-top:14px"><button class="btn sm danger" data-act="baja" data-id="${esc(a.id)}">Dar de baja</button><div class="muted" style="font-size:13px;margin-top:6px">Se oculta de las listas y conserva todo su historial. Se anota la fecha, el motivo y un comentario.</div></div>`}`,()=>animalSheet(id));
@@ -475,7 +487,7 @@ function avisosCard(){
   const l=[...T('Avisos')].sort((a,b)=>(a.estado==='nuevo'?0:1)-(b.estado==='nuevo'?0:1)||String(b.fecha).localeCompare(String(a.fecha)));
   const lista=l.filter(a=>a.estado==='nuevo').concat(l.filter(a=>a.estado!=='nuevo').slice(0,5));
   if(!lista.length)return '';
-  return `<h2 style="margin:0 0 8px">Avisos del ordeño</h2><div class="list" style="margin-bottom:18px">${lista.map(a=>`<div class="item" style="align-items:flex-start"><div class="item-main"><div class="t">${pill(AVL[a.tipo]||a.tipo,a.estado==='nuevo'?'bad':'n')} ${esc(a.animal)}${a.animalId?` <button class="btn sm alt" data-act="animal" data-id="${esc(a.animalId)}">Ver ficha</button>`:''}</div>
+  return `<h2 style="margin:0 0 8px">Avisos del ordeño</h2><div class="list" style="margin-bottom:18px">${lista.map(a=>`<div class="item" style="align-items:flex-start"><div class="item-main"><div class="t">${pill(AVL[a.tipo]||a.tipo,a.estado==='nuevo'?'bad':'n')} ${esc(a.animal)}${a.animalId?` <button class="btn sm alt" data-act="animal" data-id="${esc(a.animalId)}">Ver ficha</button>`:''}${a.tipo==='celo'&&avisoAnimal(a)?` <button class="btn sm" data-act="newRepro" data-id="${esc(avisoAnimal(a))}">Registrar celo</button>`:''}</div>
     <div class="sub">${fdate(a.fecha)}${a.turno?(a.turno==='M'?' · mañana':' · tarde'):''} · avisó ${esc(a.autor)}</div>${a.nota?`<div class="note">${esc(a.nota)}</div>`:''}${a.estado!=='nuevo'?`<div class="sub">Atendido por ${esc(a.atendidoPor||'')} el ${fdate(a.atendidoFecha)}</div>`:''}</div>
     <div style="display:flex;flex-direction:column;gap:4px">${a.estado==='nuevo'?`<button class="btn sm" data-act="avisoOk" data-id="${esc(a.id)}">Marcar atendido</button>`:''}${fixBtn('Avisos',a.id,a.autor,a.ts)}</div></div>`).join('')}</div>`;
 }
@@ -526,14 +538,14 @@ V.ordeno=()=>{
     const quienes=String(e.personal||'').split(',').filter(Boolean).map(wname).join(', ');
     const est=e.estado||'asignado';
     return `<div class="item"><div class="item-main"><div class="t">${wdOf(e.fecha)} ${fdate(e.fecha)} · ${e.turno==='M'?'Mañana':'Tarde'} ${pill(cap1(est),est==='completado'?'ok':est==='asignado'?'n':'warn')}</div>
-    <div class="sub">${esc(quienes)}${e.nota?' · '+esc(e.nota):''}</div>${cmtBlock('Ordeno',e.id,2,false)}</div>
+    <div class="sub">${esc(quienes)}${e.nota?' · '+esc(e.nota):''}</div>${vacasTxt(e)}${cmtBlock('Ordeno',e.id,2,false)}</div>
     <div style="text-align:right"><div class="num" style="font-weight:700">${e.botellas==null?(est==='asignado'?'—':pill('Sin dato','warn')):e.botellas+' bot.'}</div>
     ${(ops||(e.fecha<=td&&e.fecha>=addDays(td,-1)))?`<button class="btn sm alt" style="margin-top:4px" data-act="milkEdit" data-id="${esc(e.id)}">${est==='asignado'?'Completar':'Editar'}</button>`:''}</div></div>`;
   }).join('');
   return `<div class="pagehead"><div><h1>Ordeño</h1><p>Producción en botellas. Un día sin anotar no cuenta como cero.</p></div><div class="toolbar" style="margin:0"><button class="btn alt" data-act="newAviso">Avisar un problema</button>${ops?'<button class="btn" data-act="newShift">Asignar turno</button>':''}</div></div>
   <div class="stack"><div class="card"><h3>Últimos 7 días, turno de la mañana</h3><div class="bars">${bars}</div>
   <p class="muted" style="margin:10px 0 0;font-size:14px">Promedio de los días con dato: <b class="num">${avg}</b> botellas. La barra punteada es un turno sin dato.</p></div>
-  ${rutinasCard()}${ops?restCard():''}
+  ${rutinasCard()}${ops?restCard():vacasCard()}
   <div><h2 style="margin-bottom:8px">${ops?'Turnos':'Tus turnos'}</h2><div class="list">${rows||'<div class="item muted">Sin turnos asignados.</div>'}</div></div></div>`;
 };
 function restCard(){
@@ -542,7 +554,7 @@ function restCard(){
   const fila=a=>{const o=ordInfo(a);
     const sub=a.ordenoDesde?`Ordeña desde el ${fdate(a.ordenoDesde)} (${dayDiff(a.ordenoDesde,today())} días)`:'Sin fecha de inicio';
     const fin=a.ordenoHasta?` · reposo el ${fdate(a.ordenoHasta)}`:' · sin fecha de reposo';
-    return `<div class="item" style="align-items:flex-start"><div class="item-main"><div class="t">${esc(a.nombre)} #${esc(a.numero)} ${o?pill(o.short,o.cls):pill('Sin fechas','n')}</div><div class="sub">${sub}${fin}</div></div><div style="display:flex;flex-direction:column;gap:4px"><button class="btn sm alt" data-act="ordEdit" data-id="${esc(a.id)}">Fechas</button>${o&&o.d<=15&&sec?`<button class="btn sm" data-act="restNow" data-id="${esc(a.id)}">Pasar a reposo</button>`:''}</div></div>`};
+    return `<div class="item" style="align-items:flex-start">${avatar('Animales',a.id,String(a.numero).slice(0,3))}<div class="item-main"><div class="t">${esc(a.nombre)} #${esc(a.numero)} ${o?pill(o.short,o.cls):pill('Sin fechas','n')}</div><div class="sub">${sub}${fin}</div></div><div style="display:flex;flex-direction:column;gap:4px"><button class="btn sm alt" data-act="ordEdit" data-id="${esc(a.id)}">Fechas</button>${o&&o.d<=15&&sec?`<button class="btn sm" data-act="restNow" data-id="${esc(a.id)}">Pasar a reposo</button>`:''}</div></div>`};
   return `<div><h2 style="margin-bottom:8px">Vacas en ordeño y fecha de reposo</h2><div class="list">${en.map(fila).join('')||'<div class="item muted">No hay vacas en ordeño.</div>'}</div></div>
   <div><h2 style="margin-bottom:8px">Vacas en reposo</h2><div class="list">${rep.map(a=>`<div class="item"><div class="item-main"><div class="t">${esc(a.nombre)} #${esc(a.numero)} ${pill('En reposo','n')}</div><div class="sub">Desde el ${fdate(a.grupoDesde)}${a.ordenoHasta?' · última fecha de ordeño '+fdate(a.ordenoHasta):''}</div></div>${grpOrd()?`<button class="btn sm alt" data-act="backToMilk" data-id="${esc(a.id)}">Volver a ordeño</button>`:''}</div>`).join('')||'<div class="item muted">Ninguna vaca en reposo.</div>'}</div></div>`;
 }
@@ -757,11 +769,12 @@ const FORMS={
     await api('cambiarClave',{nueva:d.nueva});
     S.user.debeCambiar=false;await cargarTodo();S.view='inicio';render();toast('Clave guardada');
   },
-  async newAnimal(d){
-    const a=await add('Animales',{...(d.sexo?{sexo:d.sexo}:{}),madreId:d.madreId||'',padreId:d.padreId||'',madreTexto:d.madreId?'':(d.madreTexto||''),padreTexto:d.padreId?'':(d.padreTexto||''),numero:d.numero,nombre:d.nombre||('Animal '+d.numero),tipo:d.tipo,grupoId:d.grupoId,fechaIngreso:d.fechaIngreso||'',grupoDesde:today(),ordenoDesde:d.ordenoDesde||'',ordenoHasta:d.ordenoHasta||'',observaciones:d.observaciones||'',activo:true});
-    await hist(a.id,'Registrado en el sistema');closeSheet();render();toast('Animal registrado');
+  async newAnimal(d,f){
+    const a=await add('Animales',{...(d.sexo?{sexo:d.sexo}:{}),madreId:d.madreId||'',padreId:d.padreId||'',madreTexto:d.madreId?'':(d.madreTexto||''),padreTexto:d.padreId?'':(d.padreTexto||''),numero:d.numero,nombre:d.nombre||('Animal '+d.numero),tipo:d.tipo,grupoId:d.grupoId,fechaIngreso:d.fechaIngreso||'',grupoDesde:today(),ordenoDesde:d.ordenoDesde||'',ordenoHasta:d.ordenoHasta||'',observaciones:d.observaciones||'',...extraAnimal(d),activo:true});
+    await hist(a.id,'Registrado en el sistema');await subirPerfil(f,'Animales',a.id);closeSheet();render();toast('Animal registrado');
   },
-  async editAnimal(d,f){await upd('Animales',f.dataset.id,{...(d.sexo?{sexo:d.sexo}:{}),numero:d.numero,nombre:d.nombre,tipo:d.tipo,fechaIngreso:d.fechaIngreso||'',observaciones:d.observaciones||'',madreId:d.madreId||'',padreId:d.padreId||'',madreTexto:d.madreId?'':(d.madreTexto||''),padreTexto:d.padreId?'':(d.padreTexto||'')});render();animalSheet(f.dataset.id);toast('Datos guardados')},
+  async editAnimal(d,f){const a0=T('Animales').find(x=>x.id===f.dataset.id),ex=extraAnimal(d);if(a0&&ex.nacimiento===a0.nacimiento)delete ex.nacEstimado;
+    await upd('Animales',f.dataset.id,{...(d.sexo?{sexo:d.sexo}:{}),numero:d.numero,nombre:d.nombre,tipo:d.tipo,fechaIngreso:d.fechaIngreso||'',observaciones:d.observaciones||'',madreId:d.madreId||'',padreId:d.padreId||'',madreTexto:d.madreId?'':(d.madreTexto||''),padreTexto:d.padreId?'':(d.padreTexto||''),...ex});await subirPerfil(f,'Animales',f.dataset.id);render();animalSheet(f.dataset.id);toast('Datos guardados')},
   async followUp(d,f){
     await add('Tratamientos',{titulo:'Seguimiento: '+d.titulo,alcance:'animal',objetivo:f.dataset.id,fechaProgramada:d.fecha,fechaAplicada:'',responsable:S.user.nombre,nota:''});
     render();animalSheet(f.dataset.id);toast('Seguimiento programado');
@@ -792,7 +805,7 @@ const FORMS={
     await add('Visitas',{fecha:d.fecha,veterinario:d.vet,servicios:(sv.length?sv:['Consulta']).join(', '),insumos:ins,nota:d.nota||'',honorarios:d.honorarios||'',costoInsumos:d.costoInsumos||'',pagado:false});
     closeSheet();render();toast('Visita registrada');
   },
-  async milk(d,f){await upd('Ordeno',f.dataset.id,{estado:d.estado,botellas:d.botellas,nota:d.nota||''});closeSheet();render();toast('Turno actualizado')},
+  async milk(d,f){const vacas=new FormData(f).getAll('vaca').join(',');await upd('Ordeno',f.dataset.id,{estado:d.estado,botellas:d.botellas,nota:d.nota||'',vacas});closeSheet();render();toast('Turno actualizado')},
   async shift(d,f){
     const who=new FormData(f).getAll('who');if(!who.length)throw {mensaje:'Elija al menos una persona.'};
     await add('Ordeno',{fecha:d.fecha,turno:d.turno,personal:who.join(','),estado:'asignado'});closeSheet();render();toast('Turno asignado');
@@ -889,16 +902,16 @@ const ACTS={
   newAnimal:()=>openSheet(formWrap('Nuevo animal','newAnimal',`
     <div class="row2"><div class="field"><label for="f-n">Número</label><input id="f-n" name="numero" required maxlength="20"></div><div class="field"><label for="f-name">Nombre</label><input id="f-name" name="nombre" maxlength="60"></div></div>
     <div class="row2"><div class="field"><label for="f-type">Tipo</label><select id="f-type" name="tipo">${opts(['Vaca','Toro','Novillo','Ternero','Chivito','Cabra','Otro'].map(x=>[x,x]))}</select></div><div class="field"><label for="f-g">Grupo</label><select id="f-g" name="grupoId">${opts(T('Grupos').filter(g=>g.activo!==false).map(g=>[g.id,g.nombre]),S.fg!=='todos'?S.fg:(grpOrd()||{}).id)}</select></div></div>
-    <div class="field"><label for="f-since">Ingreso o nacimiento</label><input id="f-since" name="fechaIngreso" type="date"><small>Déjelo vacío si no se conoce.</small></div>
+    <div class="field"><label for="f-since">Fecha de ingreso al corral</label><input id="f-since" name="fechaIngreso" type="date"><small>Déjelo vacío si no se conoce.</small></div>
     <div class="row2"><div class="field"><label for="f-od">Ordeña desde</label><input id="f-od" name="ordenoDesde" type="date"></div><div class="field"><label for="f-oh">Pasa a reposo el</label><input id="f-oh" name="ordenoHasta" type="date"></div></div>
     <div class="field"><label for="f-sx">Sexo</label><select id="f-sx" name="sexo"><option value="">No indicar</option><option value="H">Hembra</option><option value="M">Macho</option></select></div>${parentFields(null)}<div id="sugs" class="field"></div>
-    <div class="field"><label for="f-obs">Observaciones</label><textarea id="f-obs" name="observaciones" maxlength="500"></textarea></div>`)),
+    ${animalSpecFields(null)}<div class="field"><label for="f-obs">Observaciones</label><textarea id="f-obs" name="observaciones" maxlength="500"></textarea></div>${fotoField('f-pf1',1,'Foto de perfil')}`)),
   editAnimal:el=>{const a=T('Animales').find(x=>x.id===el.dataset.id);openSheet(formWrap('Editar '+esc(a.nombre),'editAnimal',`
     <div class="row2"><div class="field"><label for="f-n">Número</label><input id="f-n" name="numero" value="${esc(a.numero)}" required></div><div class="field"><label for="f-name">Nombre</label><input id="f-name" name="nombre" value="${esc(a.nombre)}" required></div></div>
-    <div class="row2"><div class="field"><label for="f-type">Tipo</label><select id="f-type" name="tipo">${opts(['Vaca','Toro','Novillo','Ternero','Chivito','Cabra','Otro'].map(x=>[x,x]),a.tipo)}</select></div><div class="field"><label for="f-since">Ingreso o nacimiento</label><input id="f-since" name="fechaIngreso" type="date" value="${esc(a.fechaIngreso)}"></div></div>
+    <div class="row2"><div class="field"><label for="f-type">Tipo</label><select id="f-type" name="tipo">${opts(['Vaca','Toro','Novillo','Ternero','Chivito','Cabra','Otro'].map(x=>[x,x]),a.tipo)}</select></div><div class="field"><label for="f-since">Fecha de ingreso al corral</label><input id="f-since" name="fechaIngreso" type="date" value="${esc(a.fechaIngreso)}"></div></div>
     <div class="field"><label for="f-sx">Sexo</label><select id="f-sx" name="sexo"><option value="">No indicar</option><option value="H" ${a.sexo==='H'?'selected':''}>Hembra</option><option value="M" ${a.sexo==='M'?'selected':''}>Macho</option></select></div>
     ${parentFields(a)}
-    <div class="field"><label for="f-obs">Observaciones</label><textarea id="f-obs" name="observaciones" maxlength="500">${esc(a.observaciones)}</textarea></div>`,a.id))},
+    ${animalSpecFields(a)}<div class="field"><label for="f-obs">Observaciones</label><textarea id="f-obs" name="observaciones" maxlength="500">${esc(a.observaciones)}</textarea></div>${fotoField('f-pf1',1,'Foto de perfil')}`,a.id))},
   baja:el=>{const k='baja:'+el.dataset.id;if(S.confirm===k){S.confirm=null;act(async()=>{await upd('Animales',el.dataset.id,{activo:false});closeSheet();render();toast('Animal dado de baja')})}else{S.confirm=k;animalSheet(el.dataset.id)}},
   ordEdit:el=>{const a=T('Animales').find(x=>x.id===el.dataset.id);openSheet(formWrap('Ordeño de '+esc(a.nombre),'ordPeriodo',`<div class="row2"><div class="field"><label for="f-od">Ordeña desde</label><input id="f-od" name="ordenoDesde" type="date" value="${esc(a.ordenoDesde)}"></div><div class="field"><label for="f-oh">Pasa a reposo el</label><input id="f-oh" name="ordenoHasta" type="date" value="${esc(a.ordenoHasta)}"></div></div><p class="muted" style="margin:0 0 12px;font-size:14px">Se avisa 15 días antes de la fecha de reposo y cuando ya pasó.</p>`,a.id))},
   restNow:el=>act(async()=>{const a=T('Animales').find(x=>x.id===el.dataset.id),g=grpSec();if(!g)throw {mensaje:'No existe el grupo de vacas secas.'};await upd('Animales',a.id,{grupoId:g.id,grupoDesde:today()});await hist(a.id,'Pasó a reposo ('+g.nombre+')');render();toast(a.nombre+' pasó a reposo')}),
@@ -922,6 +935,7 @@ const ACTS={
   milkEdit:el=>{const e=T('Ordeno').find(x=>x.id===el.dataset.id);openSheet(formWrap(`Turno ${wdOf(e.fecha)} ${fdate(e.fecha)}`,'milk',`
     <div class="field"><label for="f-st">Estado</label><select id="f-st" name="estado">${opts([['asignado','Asignado'],['completado','Completado'],['inconvenientes','Con inconvenientes']],e.estado==='asignado'?'completado':e.estado)}</select></div>
     <div class="field"><label for="f-b">Producción total (botellas)</label><input id="f-b" name="botellas" type="number" min="0" value="${e.botellas==null?'':e.botellas}"><small>Déjelo vacío si no se anotó. Vacío no es lo mismo que cero.</small></div>
+    ${(()=>{const sel=String(e.vacas||'').split(','),l=vacasOrd();return l.length?`<div class="field"><label>Vacas ordeñadas</label><div class="checks">${l.map(v=>`<label for="fv-${esc(v.id)}"><input id="fv-${esc(v.id)}" type="checkbox" name="vaca" value="${esc(v.id)}" ${sel.includes(v.id)?'checked':''}>${esc(v.nombre)} #${esc(v.numero)}</label>`).join('')}</div><button class="btn sm alt" type="button" data-act="vacasTodas" style="margin-top:6px">Marcar todas</button></div>`:''})()}
     <div class="field"><label for="f-note">Comentarios</label><textarea id="f-note" name="nota" maxlength="500">${esc(e.nota)}</textarea></div>`,e.id))},
   newShift:()=>openSheet(formWrap('Asignar turno de ordeño','shift',`
     <div class="row2"><div class="field"><label for="f-date">Fecha</label><input id="f-date" name="fecha" type="date" value="${addDays(today(),1)}" required></div><div class="field"><label for="f-sh">Turno</label><select id="f-sh" name="turno"><option value="M">Mañana</option><option value="T">Tarde</option></select></div></div>
@@ -960,7 +974,7 @@ const ACTS={
     <div class="field"><label for="f-notes">Comentarios</label><textarea id="f-notes" name="notas" maxlength="500">${esc(t.notas)}</textarea></div>`,t.id))},
   taskDone:el=>act(async()=>{const r=await api('avanceRegistrar',{tareaId:el.dataset.id,texto:'',final:true});upsert('Avances',r.fila);upsert('Tareas',r.tarea);render();toast('Tarea completada por '+S.user.nombre)}),
   avance:el=>{const t=T('Tareas').find(x=>x.id===el.dataset.id);openSheet(formWrap('Informar avance','avance',`<p style="margin:0 0 12px;font-weight:700">${esc(t.titulo)}${t.parcela?' · '+esc(t.parcela):''}</p><div class="field"><label for="f-av-t">¿Qué se hizo hoy?</label><textarea id="f-av-t" name="texto" maxlength="500" placeholder="Ej. Se limpió la mitad del lote"></textarea></div><div class="field"><label>Estado de la labor</label><div class="checks"><label for="f-av-p"><input id="f-av-p" type="radio" name="fin" value="0" checked>Sigue en curso (avance parcial)</label><label for="f-av-f"><input id="f-av-f" type="radio" name="fin" value="1">Ya quedó terminada</label></div></div>`,t.id,'Enviar informe'))},
-  newAviso:()=>{const h=Number(new Intl.DateTimeFormat('en-US',{timeZone:TZ,hour:'numeric',hour12:false}).format(new Date()))%24;openSheet(formWrap('Avisar un problema del ordeño','aviso',`<div class="field"><label for="f-av-tipo">¿Qué vio?</label><select id="f-av-tipo" name="tipo">${opts(Object.keys(AVL).map(k=>[k,AVL[k]]))}</select></div><div class="field"><label for="f-av-an">Animal</label><input id="f-av-an" name="animal" required maxlength="60" placeholder="Número o nombre de la vaca"></div><div class="field"><label for="f-av-nota">Observación</label><textarea id="f-av-nota" name="nota" maxlength="300" placeholder="Ej. Muchas garrapatas en las orejas"></textarea></div><div class="field"><label for="f-av-tn">Turno</label><select id="f-av-tn" name="turno">${opts([['M','Mañana'],['T','Tarde']],h<12?'M':'T')}</select><small>El aviso le llega al veterinario, al mandador, al capataz y al administrador dentro de la app.</small></div>`,'','Enviar aviso'))},
+  newAviso:()=>{const h=Number(new Intl.DateTimeFormat('en-US',{timeZone:TZ,hour:'numeric',hour12:false}).format(new Date()))%24;openSheet(formWrap('Avisar un problema del ordeño','aviso',`<div class="field"><label for="f-av-tipo">¿Qué vio?</label><select id="f-av-tipo" name="tipo">${opts(Object.keys(AVL).filter(k=>k!=='emergencia').map(k=>[k,AVL[k]]))}</select></div><div class="field"><label for="f-av-an">Animal</label><input id="f-av-an" name="animal" required maxlength="60" placeholder="Número o nombre de la vaca"></div><div class="field"><label for="f-av-nota">Observación</label><textarea id="f-av-nota" name="nota" maxlength="300" placeholder="Ej. Muchas garrapatas en las orejas"></textarea></div><div class="field"><label for="f-av-tn">Turno</label><select id="f-av-tn" name="turno">${opts([['M','Mañana'],['T','Tarde']],h<12?'M':'T')}</select><small>El aviso le llega al veterinario, al mandador, al capataz y al administrador dentro de la app.</small></div>`,'','Enviar aviso'))},
   avisoOk:el=>act(async()=>{const a=T('Avisos').find(x=>x.id===el.dataset.id);await upd('Avisos',a.id,{estado:'atendido',atendidoPor:S.user.nombre,atendidoFecha:today()});if(a.animalId)await hist(a.animalId,`Aviso del ordeño atendido: ${AVL[a.tipo]||a.tipo}`);render();toast('Aviso atendido')}),
   rateEdit:el=>{const x=((S.resumen||{}).resumen||[]).find(r=>r.personalId===el.dataset.p);if(!x)return;const g=S.resumen.tarifas,f=(k,l)=>`<div class="field"><label for="f-rt-${k}">${l}</label><input id="f-rt-${k}" name="${k}" type="number" min="0" step="0.5" value="${x.propia[k]?x.tarifas[k]:''}" placeholder="${g[k]==null?'Sin tarifa':'General: '+money(g[k])}"></div>`;openSheet(formWrap('Tarifa individual · '+esc(x.nombre),'rate',`<p class="muted" style="margin:0 0 12px;font-size:14px">Deje un campo vacío para usar la tarifa general. Rige desde hoy; las semanas ya pagadas no cambian.</p><div class="row2">${f('M','Mañana')}${f('T','Tarde')}</div>${f('D','Día completo')}`,x.personalId))},
   problem:el=>openSheet(formWrap('Reportar un problema','problem',`<div class="field"><label for="f-text">¿Qué pasó?</label><textarea id="f-text" name="texto" required maxlength="300"></textarea></div>`,el.dataset.id)),
@@ -1042,7 +1056,6 @@ window.addEventListener('unhandledrejection',e=>{e.preventDefault();showErr(e.re
 const tsMs=ts=>/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(String(ts||''))?Date.parse(String(ts).slice(0,19)+'-06:00'):0;
 const canFix=(autor,ts)=>isAdmin()||(!!autor&&autor===S.user.nombre&&tsMs(ts)>0&&Date.now()-tsMs(ts)<86400000);
 const fimg=id=>`<img alt="" data-fid="${esc(id)}"${S.fc[id]?` src="${S.fc[id]}"`:''}>`;
-const fotoField=id=>`<div class="field"><label class="btn alt" for="${id}" style="display:inline-block">Tomar o elegir foto</label><input id="${id}" type="file" accept="image/*" data-foto hidden><small class="fotoInfo" aria-live="polite">Sin foto (opcional)</small></div>`;
 async function leerFoto(f){const i=f.querySelector('input[data-foto]'),file=i&&i.files[0];return file?await reducirFoto(file):''}
 let lazyOn=false;
 async function lazyFotos(){
@@ -1137,7 +1150,7 @@ function refreshSugs(f){
 
 /* ───────── Pantallas nuevas ───────── */
 const PED_ESTADO={pendiente:['Pendiente','warn'],aprobado:['Aprobado','gold'],comprado:['Comprado','gold'],recibido:['Recibido','ok'],rechazado:['Rechazado','bad']};
-const pedTipos=()=>S.user.rol==='veterinario'?['Medicamento','Material veterinario','Otro']:S.user.rol==='mecanico'?['Repuesto','Herramienta','Otro']:S.user.rol==='mozo'?['Limpieza','Alimento','Herramienta','Otro']:['Limpieza','Alimento','Herramienta','Repuesto','Medicamento','Material veterinario','Otro'];
+const pedTipos=()=>S.user.rol==='veterinario'?['Medicamento','Material veterinario','Otro']:S.user.rol==='mecanico'?['Repuesto','Herramienta','Combustible','Otro']:S.user.rol==='mozo'?['Limpieza','Alimento','Herramienta','Otro']:['Limpieza','Alimento','Herramienta','Repuesto','Combustible','Medicamento','Material veterinario','Otro'];
 const vehName=id=>{const v=T('Vehiculos').find(x=>x.id===id);return v?v.nombre:''};
 const pedPuedeEditar=p=>p.creadoPor===S.user.nombre&&(p.estado==='pendiente'||canFix(p.creadoPor,p.ts))||isAdmin();
 function pedFotos(p){return T('Fotos').filter(f=>f.modulo==='Pedidos'&&f.refId===p.id).map(f=>`<button class="foto mini" type="button" data-act="verfoto" data-id="${esc(f.id)}" aria-label="Ver foto">${fimg(f.id)}</button>`).join('')}
@@ -1160,7 +1173,7 @@ V.pedidos=()=>{
   if(f==='recibidos')l=l.filter(p=>p.estado==='recibido'||p.estado==='rechazado');
   l.sort((a,b)=>(a.urgencia==='urgente'?0:1)-(b.urgencia==='urgente'?0:1)||String(b.ts).localeCompare(String(a.ts)));
   const n=T('Pedidos').filter(p=>p.estado==='pendiente').length;
-  return `<div class="pagehead"><div><h1>Pedidos</h1><p>${ops?'Lo que hace falta en la finca. Aquí llegan también los pedidos del veterinario y del mecánico.':'Lo que usted pidió y cómo va.'}</p></div><button class="btn" data-act="newPedido">Nuevo pedido</button></div>
+  return `<div class="pagehead"><div><h1>Pedidos</h1><p>${ops?'Lo que hace falta en la finca. Aquí llegan también los pedidos del veterinario y del mecánico.':'Lo que usted pidió y cómo va.'}</p></div><div class="toolbar" style="margin:0">${ops?'<button class="btn alt" data-act="newCombustible">Compra de combustible</button>':''}<button class="btn" data-act="newPedido">Nuevo pedido</button></div></div>
   <div class="chips">${[['abiertos','Por atender'+(ops&&n?' · '+n:'')],['recibidos','Cerrados'],['todos','Todos']].map(c=>`<button class="${f===c[0]?'on':''}" data-act="pf" data-k="${c[0]}">${c[1]}</button>`).join('')}</div>
   <div class="list">${l.map(pedItem).join('')||'<div class="item muted">No hay pedidos aquí.</div>'}</div>
   ${ops?'':'<p class="muted" style="font-size:14px;margin-top:12px">Solo usted ve sus pedidos. El administrador, el mandador y el capataz ven todos.</p>'}`;
@@ -1184,7 +1197,7 @@ V.parcelas=()=>{
   return `<div class="pagehead"><div><h1>Parcelas y cercos</h1><p>Cada parcela tiene su perfil: qué hay, qué se hace cada día y quién lo hace.</p></div><button class="btn" data-act="newParcela">Nueva parcela</button></div>
   <div class="split two">${l.map(p=>{
     const ts=tareasDeParcela(p),hoy=ts.filter(t=>t.estado!=='completado'&&tCubre(t,td));
-    return `<button class="card" style="text-align:left;width:100%;cursor:pointer" data-act="parcela" data-id="${esc(p.id)}"><div style="display:flex;justify-content:space-between;gap:8px"><h3>${esc(p.nombre)}</h3>${pill(usoL[p.uso]||'Otro','gold')}</div>
+    return `<button class="card" style="text-align:left;width:100%;cursor:pointer" data-act="parcela" data-id="${esc(p.id)}"><div style="display:flex;justify-content:space-between;gap:8px;align-items:center">${avatar('Parcelas',p.id,(p.nombre||'?').slice(0,2))}<h3 style="flex:1">${esc(p.nombre)}</h3>${pill(usoL[p.uso]||'Otro','gold')}</div>
     <div class="sub muted" style="font-size:14px">${p.area!==''&&p.area!=null?esc(p.area)+' '+esc({mz:'manzanas',ha:'hectáreas',m2:'m²'}[p.unidad]||'')+' · ':''}${esc(p.descripcion||'Sin descripción')}</div>
     <div class="sub" style="margin-top:6px">${hoy.length?pill('Hoy: '+hoy.length+' actividad'+(hoy.length>1?'es':''),'warn'):pill('Sin actividades hoy','n')} ${ts.filter(t=>t.estado!=='completado').length?pill(ts.filter(t=>t.estado!=='completado').length+' abierta(s)','n'):''}</div></button>`}).join('')||'<div class="card muted">Todavía no hay parcelas. Cree la primera con el botón de arriba.</div>'}</div>`;
 };
@@ -1194,11 +1207,11 @@ function parcelaSheet(id){
   const dias=[0,1,2,3,4,5,6].map(n=>addDays(td,n));
   const agenda=dias.map(d=>{const l=ts.filter(t=>t.estado!=='completado'&&tCubre(t,d));return l.length?`<div class="item" style="align-items:flex-start"><div class="item-main"><div class="t">${wdOf(d)} ${fdate(d)}${d===td?' · hoy':''}</div>${l.map(t=>`<div class="sub"><b>${esc(t.titulo)}</b> · ${esc(tnames(t))}</div>`).join('')}</div></div>`:''}).join('');
   const hechas=ts.filter(t=>t.estado==='completado').sort((a,b)=>String(tFin(b)).localeCompare(String(tFin(a)))).slice(0,6);
-  openSheet(sheetTop(esc(p.nombre))+`<dl class="kv"><dt>Uso</dt><dd>${esc(usoL[p.uso]||'Otro')}</dd><dt>Tamaño</dt><dd>${p.area!==''&&p.area!=null?esc(p.area)+' '+esc({mz:'manzanas',ha:'hectáreas',m2:'m²'}[p.unidad]||''):'—'}</dd><dt>Qué hay</dt><dd>${esc(p.descripcion||'—')}</dd>${p.notas?`<dt>Notas</dt><dd>${esc(p.notas)}</dd>`:''}${cult.length?`<dt>Cultivos</dt><dd>${cult.map(c=>esc(c.nombre)).join(', ')}</dd>`:''}</dl>
+  openSheet(sheetTop(esc(p.nombre))+`<div style="margin-bottom:10px">${avatar('Parcelas',p.id,(p.nombre||'?').slice(0,2),'big')}</div><dl class="kv"><dt>Uso</dt><dd>${esc(usoL[p.uso]||'Otro')}</dd><dt>Tamaño</dt><dd>${p.area!==''&&p.area!=null?esc(p.area)+' '+esc({mz:'manzanas',ha:'hectáreas',m2:'m²'}[p.unidad]||''):'—'}</dd><dt>Qué hay</dt><dd>${esc(p.descripcion||'—')}</dd>${p.notas?`<dt>Notas</dt><dd>${esc(p.notas)}</dd>`:''}${cult.length?`<dt>Cultivos</dt><dd>${cult.map(c=>esc(c.nombre)).join(', ')}</dd>`:''}</dl>
   <div class="toolbar" style="margin-top:10px"><button class="btn sm" data-act="newTask" data-parcela="${esc(p.nombre)}">Programar actividad</button><button class="btn sm alt" data-act="editParcela" data-id="${esc(p.id)}">Editar perfil</button></div>
   <div class="lbl" style="margin:12px 0 6px">Actividades de los próximos 7 días</div><div class="list">${agenda||'<div class="item muted">No hay actividades programadas.</div>'}</div>
   <div class="lbl" style="margin:12px 0 6px">Hechas recientemente</div><div class="list">${hechas.map(t=>`<div class="item"><div class="item-main"><div class="t" style="font-weight:600">${esc(t.titulo)}</div><div class="sub">${fdate(t.inicio||t.fecha)}${tFin(t)&&tFin(t)!==(t.inicio||t.fecha)?' al '+fdate(tFin(t)):''} · ${esc(tnames(t))}${t.completadoPor?' · terminó '+esc(t.completadoPor):''}</div></div></div>`).join('')||'<div class="item muted">Nada todavía.</div>'}</div>
-  ${cmtBlock('Parcelas',p.id,0,'Seguimiento, comentarios y fotos')}`,()=>parcelaSheet(id));
+  ${galeriaHtml('Parcelas',p.id)}${cmtBlock('Parcelas',p.id,0,'Seguimiento, comentarios y fotos')}`,()=>parcelaSheet(id));
 }
 
 /* Rutinas */
@@ -1241,7 +1254,7 @@ V.inicio=()=>{
   return `<div class="pagehead"><div><h1>${head}</h1><p>${esc(fecha)} · ${esc(u.nombre)}</p></div><div class="toolbar" style="margin:0"><button class="btn" data-act="comentar" data-m="General" data-r="">Reportar algo</button><button class="btn alt sm" data-act="refresh">Actualizar datos</button></div></div>
   <div class="stack"><div class="list today">${rows.map(r=>`<div class="item" data-act="go" data-v="${r[0]}"><div class="item-main">${r[1]}</div><div class="val num">${r[2]}</div></div>`).join('')}</div>
   <div><h2 style="margin-bottom:8px">Requiere atención</h2>${al.length?`<div class="list">${al.slice(0,5).map(a=>`<button class="item click stripe ${a.level==='bad'?'bad':'warn'}" data-act="go" data-v="${a.mod}"><div class="item-main">${esc(a.text)}</div></button>`).join('')}</div>${al.length>5?`<p class="muted" style="margin:8px 0 0">Y ${al.length-5} más en <a href="#" data-act="go" data-v="alertas" style="color:var(--gold-ink);font-weight:700">Alertas</a>.</p>`:''}`:'<div class="card muted">Nada pendiente por ahora.</div>'}</div>
-  ${ops?obsCard():''}</div>`;
+  ${ops?obsCard():misCard()}</div>`;
 };
 
 /* ───────── Ficha imprimible del animal (administrador) ───────── */
@@ -1270,11 +1283,13 @@ async function fichaAnimal(id){
   <table class="rt kvt"><tr><th>Tipo</th><td>${esc(a.tipo)}${a.sexo?' · '+(a.sexo==='H'?'Hembra':'Macho'):''}</td></tr>
   <tr><th>Grupo</th><td>${esc(gname(a.grupoId))}</td></tr>
   <tr><th>Ingreso o nacimiento</th><td>${fdatey(a.fechaIngreso)}</td></tr>
+  ${a.nacimiento?`<tr><th>Edad</th><td>${esc(edadTxt(a))} · nació ${fdatey(a.nacimiento)}</td></tr>`:''}${[['Raza',a.raza],['Color',a.color],['Peso',a.peso!==''&&a.peso!=null?a.peso+' kg':''],['Fierro',a.fierro]].filter(x=>x[1]).map(x=>`<tr><th>${x[0]}</th><td>${esc(x[1])}</td></tr>`).join('')}
   <tr><th>Tiempo en el corral</th><td>${esc(aniosMeses(a.fechaIngreso,baja?a.bajaFecha:''))}${baja?' (hasta la baja)':''}</td></tr>
   <tr><th>Estado</th><td>${baja?`<b>De baja</b> el ${fdatey(a.bajaFecha)} · Motivo: ${esc(a.bajaMotivo||'—')}${a.bajaNota?' · '+esc(a.bajaNota):''}`:'Activo en el corral'}</td></tr>
-  <tr><th>Número de crías</th><td><b>${crias.length}</b>${crias.length?': '+crias.map(c=>esc(c.nombre)+' #'+esc(c.numero)+(c.fechaIngreso?' ('+fdatey(c.fechaIngreso)+')':'')).join(', '):''}</td></tr>
+  <tr><th>Número de crías</th><td><b>${esHembraRep(a)?Math.max(contCrias(a),crias.length):crias.length}</b>${crias.length?': '+crias.map(c=>esc(c.nombre)+' #'+esc(c.numero)+(c.fechaIngreso?' ('+fdatey(c.fechaIngreso)+')':'')).join(', '):''}</td></tr>
   ${a.tipo==='Vaca'?`<tr><th>Ordeño</th><td>${a.ordenoDesde?'Desde el '+fdatey(a.ordenoDesde):'Sin fecha de inicio'}${a.ordenoHasta?' · reposo el '+fdatey(a.ordenoHasta):''}</td></tr>`:''}</table>
-  ${a.observaciones?`<p><b>Observaciones:</b> ${esc(a.observaciones)}</p>`:''}
+  ${a.observaciones?`<p><b>Observaciones:</b> ${esc(a.observaciones)}</p>`:''}${a.especificaciones?`<p><b>Especificaciones:</b> ${esc(a.especificaciones)}</p>`:''}
+  ${(()=>{const r=reproEstado(a),l=reprosDe(a);return esHembraRep(a)&&(r||l.length)?`<h2 class="rh2">Reproducción</h2><p>${r?'<b>'+esc(r.txt)+'</b>':''}${r&&r.parto?' · Parto probable '+fdatey(r.parto):''}</p>${tableHtml(['Fecha','Evento','Detalle'],l.map(e=>[fdate(e.fecha),esc(REPRO_L[e.tipo]+(e.servida?' con servicio':'')),esc([e.toro&&'Toro: '+e.toro,e.criaId&&'Cría: '+animalName(e.criaId),e.nota].filter(Boolean).join(' · '))]))}`:''})()}
   <h2 class="rh2">Antecedentes (genealogía)</h2>${genHtml(a,true)}
   <h2 class="rh2">Medicamentos y seguimiento médico</h2>${tableHtml(['Fecha','Tratamiento','Aplicado a','Responsable','Estado'],trat.map(t=>[fdate(t.fechaAplicada||t.fechaProgramada),esc(t.titulo)+(t.nota?'<br><small>'+esc(t.nota)+'</small>':''),esc(scopeLabel(t)),esc(t.responsable||''),t.fechaAplicada?'Aplicado':'Pendiente (para el '+fdate(t.fechaProgramada)+')']))}
   ${av.length?`<h2 class="rh2">Avisos y emergencias</h2>${tableHtml(['Fecha','Tipo','Detalle','Avisó'],av.map(x=>[fdate(x.fecha),esc(AVL[x.tipo]||x.tipo),esc(x.nota||''),esc(x.autor)]))}`:''}
@@ -1356,7 +1371,7 @@ async function generarReporte(d,h,secs){
   if(secs.includes('ped')){
     const p=fi('Pedidos').filter(x=>inR(x.fecha,d,h)).sort((a,b)=>String(a.fecha).localeCompare(String(b.fecha)));
     const gasto=p.filter(x=>['comprado','recibido'].includes(x.estado)).reduce((s,x)=>s+Number(x.costo||0),0);
-    sec('Pedidos y compras',`<p><b>Total comprado: ${money(gasto)}</b> (pedidos comprados o recibidos con costo anotado).</p>${tableHtml(['Fecha','Pedido','Tipo','Pidió','Estado','Recibió','Costo'],p.map(x=>[fdate(x.fecha),esc(x.titulo)+(x.cantidad?' ('+esc(x.cantidad)+')':''),esc(x.tipo),esc(x.creadoPor),(PED_ESTADO[x.estado]||[x.estado])[0],esc(x.recibidoPor||''),x.costo===''||x.costo==null?'—':money(x.costo)]))}`);
+    sec('Pedidos y compras',`<p><b>Total comprado: ${money(gasto)}</b> (pedidos comprados o recibidos con costo anotado).</p>${(()=>{const t={};p.forEach(x=>fuelOf(x).forEach(l=>{const o=t[l.t]||(t[l.t]={g:0,c:0});o.g+=l.g;o.c+=l.g*l.p}));const k=Object.keys(t);return k.length?`<p><b>Combustible comprado:</b> ${k.map(q=>`${FUEL_L[q]} ${Math.round(t[q].g*100)/100} gal (${money(t[q].c)})`).join(' · ')}</p>`:''})()}${tableHtml(['Fecha','Pedido','Tipo','Pidió','Estado','Recibió','Costo'],p.map(x=>[fdate(x.fecha),esc(x.titulo)+(x.cantidad?' (pidió '+esc(x.cantidad)+')':'')+(x.comprado?'<br><small>Se compró: '+esc(x.comprado)+'</small>':''),esc(x.tipo),esc(x.creadoPor),(PED_ESTADO[x.estado]||[x.estado])[0],esc(x.recibidoPor||''),x.costo===''||x.costo==null?'—':money(x.costo)]))}`);
   }
   if(secs.includes('obs')){
     const c=fi('Comentarios').filter(x=>inR(x.fecha,d,h)).sort((a,b)=>String(a.ts).localeCompare(String(b.ts)));
@@ -1491,24 +1506,315 @@ Object.assign(ACTS,{
   tdeshacer:el=>act(async()=>{const r=await api('tratamientoRevertir',{id:el.dataset.id});upsert('Tratamientos',r.fila);render();toast('Tratamiento devuelto a pendiente')}),
   reabrir:el=>act(async()=>{const r=await api('tareaReabrir',{id:el.dataset.id});upsert('Tareas',r.tarea);upsert('Avances',r.fila);render();toast('Labor reabierta')})
 });
-const vehFields=v=>`<div class="field"><label for="f-vn">Nombre</label><input id="f-vn" name="nombre" required maxlength="60" value="${esc(v&&v.nombre)}"></div>
-  <div class="row2"><div class="field"><label for="f-vt">Tipo</label><select id="f-vt" name="tipo">${opts(['Camión','Moto','Moto con cama','Otro'].map(x=>[x,x]),v&&v.tipo)}</select></div><div class="field"><label for="f-vp">Placa</label><input id="f-vp" name="placa" maxlength="20" value="${esc(v&&v.placa)}"></div></div>
-  <div class="row2"><div class="field"><label for="f-vs">Estado</label><select id="f-vs" name="estado">${opts(['Operativo','Con falla','En revisión','En taller'].map(x=>[x,x]),v?v.estado:'Operativo')}</select></div><div class="field"><label for="f-vr">Próxima revisión</label><input id="f-vr" name="proximaRevision" type="date" value="${esc(v&&v.proximaRevision)}"></div></div>
-  <div class="field"><label for="f-vo">Nota</label><textarea id="f-vo" name="nota" maxlength="300">${esc(v&&v.nota)}</textarea></div>`;
 const parcelaFields=p=>`<div class="field"><label for="f-pn">Nombre de la parcela o cerco</label><input id="f-pn" name="nombre" required maxlength="60" value="${esc(p&&p.nombre)}"></div>
   <div class="row2"><div class="field"><label for="f-pu2">Para qué se usa</label><select id="f-pu2" name="uso">${opts(Object.keys(usoL).map(k=>[k,usoL[k]]),p&&p.uso)}</select></div><div class="field"><label for="f-pa">Tamaño</label><div style="display:flex;gap:6px"><input id="f-pa" name="area" type="number" min="0" step="0.01" value="${p&&p.area!==''&&p.area!=null?p.area:''}" style="flex:1;min-width:0"><select name="unidad" aria-label="Unidad" style="width:auto">${opts([['mz','manzanas'],['ha','hectáreas'],['m2','m²']],p&&p.unidad||'mz')}</select></div></div></div>
   <div class="field"><label for="f-pds">Qué hay ahí</label><textarea id="f-pds" name="descripcion" maxlength="300" placeholder="Ej. Pasto estrella, 12 vacas en rotación">${esc(p&&p.descripcion)}</textarea></div>
   <div class="field"><label for="f-pno">Notas de seguimiento</label><textarea id="f-pno" name="notas" maxlength="300">${esc(p&&p.notas)}</textarea></div>
-  ${p?`<div class="field"><label for="f-pac">Estado</label><select id="f-pac" name="activa">${opts([['1','En uso'],['0','Ya no se usa']],p.activo===false?'0':'1')}</select></div>`:'<input type="hidden" name="activa" value="1">'}`;
+  ${p?`<div class="field"><label for="f-pac">Estado</label><select id="f-pac" name="activa">${opts([['1','En uso'],['0','Ya no se usa']],p.activo===false?'0':'1')}</select></div>`:'<input type="hidden" name="activa" value="1">'}${fotoField('f-pf1',1,'Foto de perfil')}`;
 
 document.addEventListener('change',e=>{
   const t=e.target;if(!t||!t.dataset)return;
-  if(t.dataset.foto!==undefined){const s=t.closest('.field').querySelector('.fotoInfo');if(s)s.textContent=t.files[0]?'Foto lista: '+t.files[0].name:'Sin foto (opcional)'}
+  if(t.dataset.foto!==undefined){const sl=t.closest('.fslot');if(sl){sl.querySelectorAll('input[data-foto]').forEach(o=>{if(o!==t)o.value=''});const pv=sl.querySelector('[data-prev]');if(pv)pv.textContent=t.files[0]?'Foto lista: '+t.files[0].name:''}}
   const f=t.closest&&t.closest('form[data-form="newAnimal"]');if(f&&/^(madreId|padreId|sexo|tipo)$/.test(t.name))refreshSugs(f);
 });
 document.addEventListener('input',e=>{const f=e.target.closest&&e.target.closest('form[data-form="newAnimal"]');if(f&&/^(madreTexto|padreTexto)$/.test(e.target.name))refreshSugs(f)});
 
 {const _nt=ACTS.newTask;ACTS.newTask=el=>{_nt(el);const pp=el&&el.dataset&&el.dataset.parcela;if(pp){const i=$('#f-parc');if(i)i.value=pp}}}
+
+/* ───────── Versión 3.1: cámara, perfiles, especificaciones, edad por grupo, reproducción, vacas ordeñadas y compras ───────── */
+const maxFotos=()=>['admin','veterinario','mecanico'].includes(S.user.rol)?3:2;
+const addMonths=(s,n)=>{const d=new Date(s+'T12:00:00Z');d.setUTCMonth(d.getUTCMonth()+n);return d.toISOString().slice(0,10)};
+function fotoField(id,max,titulo){
+  max=max||maxFotos();let h='';
+  for(let i=1;i<=max;i++)h+=`<div class="fslot"><div class="sub"><b>${esc(titulo||('Foto '+i+(i===2?' (otro ángulo)':'')))}</b></div><div class="fprev" data-prev></div><div class="toolbar" style="margin:6px 0 0"><label class="btn alt sm" for="${id}-c${i}">Tomar foto</label><label class="btn alt sm" for="${id}-g${i}">Elegir de la galería</label></div><input id="${id}-c${i}" type="file" accept="image/*" capture="environment" data-foto hidden><input id="${id}-g${i}" type="file" accept="image/*" data-foto hidden></div>`;
+  return `<div class="field fotos-f"><label>Fotos (opcional, hasta ${max})</label>${h}</div>`;
+}
+async function leerFotos(f){const out=[];for(const s of f.querySelectorAll('.fslot')){const i=[...s.querySelectorAll('input[data-foto]')].find(x=>x.files&&x.files[0]);if(i)out.push(await reducirFoto(i.files[0]))}return out}
+async function subirFotosA(modulo,refId,fotos,desc){const out=[];for(const d of fotos){const r=await api('fotoSubir',{modulo,refId,descripcion:desc||'',datos:d});upsert('Fotos',r.fila);S.fc[r.fila.id]=d;out.push(r.fila)}return out}
+async function subirPerfil(f,modulo,refId){
+  const fs=await leerFotos(f);if(!fs.length)return;
+  const [x]=await subirFotosA(modulo,refId,fs.slice(0,1),'Foto de perfil');
+  const r=await api('fotoPerfil',{id:x.id});T('Fotos').forEach(q=>{if(q.modulo===modulo&&q.refId===refId)q.perfil=false});upsert('Fotos',r.fila);
+}
+const perfilDe=(m,id)=>T('Fotos').find(f=>f.modulo===m&&f.refId===id&&f.perfil===true);
+const avatar=(m,id,txt,cls)=>{const p=perfilDe(m,id);return p?`<div class="avatar pf ${cls||''}">${fimg(p.id)}</div>`:`<div class="avatar ${cls||''}">${esc(txt)}</div>`};
+const PERFIL_PUEDE={Animales:()=>['admin','capataz','mandador','veterinario'].includes(S.user.rol),Parcelas:()=>canOps(),Vehiculos:()=>canOps()||S.user.rol==='mecanico',Equipos:()=>canOps()||S.user.rol==='mecanico'};
+function galeriaHtml(m,id,titulo){
+  const ed=PERFIL_PUEDE[m]&&PERFIL_PUEDE[m]();
+  const fs=T('Fotos').filter(f=>f.modulo===m&&f.refId===id).sort((x,y)=>String(y.fecha).localeCompare(String(x.fecha)));
+  return `<div class="lbl" style="margin:14px 0 6px">${titulo||'Galería de fotos'} (${fs.length})</div>
+  <div class="fotos">${fs.map(f=>`<div><button class="foto" type="button" data-act="verfoto" data-id="${esc(f.id)}" aria-label="Ver foto">${fimg(f.id)}<span>${fdate(f.fecha)}${f.descripcion?' · '+esc(f.descripcion):''}</span></button>${f.perfil?`<div style="margin-top:4px">${pill('Foto de perfil','gold')}</div>`:(ed?`<button class="btn sm alt" style="margin-top:4px" data-act="fperfil" data-id="${esc(f.id)}">Hacer perfil</button>`:'')}</div>`).join('')||'<div class="item muted" style="grid-column:1/-1">Sin fotos todavía.</div>'}</div>
+  ${ed?`<button class="btn sm alt" style="margin-top:10px" data-act="addFotos" data-m="${m}" data-r="${esc(id)}">Agregar fotos</button>`:''}`;
+}
+
+/* Edad y cambio de grupo */
+function mesesEdad(a){if(!a.nacimiento)return null;const x=new Date(a.nacimiento+'T12:00:00Z'),y=new Date(today()+'T12:00:00Z');let m=(y.getUTCFullYear()-x.getUTCFullYear())*12+y.getUTCMonth()-x.getUTCMonth();if(y.getUTCDate()<x.getUTCDate())m--;return Math.max(0,m)}
+function edadTxt(a){const m=mesesEdad(a);if(m==null)return 'No registrada';const y=Math.floor(m/12),r=m%12;const t=m<1?(dayDiff(a.nacimiento,today())+' días'):(y?`${y} año${y>1?'s':''}`:'')+(y&&r?' y ':'')+(r?`${r} mes${r>1?'es':''}`:'');return t+(a.nacEstimado?' (aprox.)':'')}
+function cambioGrupo(a){
+  if(a.activo===false||!a.nacimiento)return null;
+  const g=T('Grupos').find(x=>x.id===a.grupoId);if(!g||!g.mesesMax||!g.siguienteId)return null;
+  const sg=T('Grupos').find(x=>x.id===g.siguienteId);if(!sg)return null;
+  const due=addMonths(a.nacimiento,Number(g.mesesMax));return {due,dias:dayDiff(today(),due),de:g,a:sg};
+}
+const extraAnimal=(d)=>{
+  const o={raza:d.raza||'',color:d.color||'',fierro:d.fierro||'',especificaciones:d.especificaciones||'',peso:d.peso===''||d.peso==null?'':Number(d.peso)};
+  if(d.nacimiento){o.nacimiento=d.nacimiento;o.nacEstimado=false}
+  else if(d.edadMeses!==''&&d.edadMeses!=null&&isFinite(Number(d.edadMeses))){const m=Math.round(Number(d.edadMeses));if(m>=0){o.nacimiento=addMonths(d.fechaIngreso||today(),-m);o.nacEstimado=true}}
+  return o;
+};
+const animalSpecFields=a=>`<div class="row2"><div class="field"><label for="f-nac">Fecha de nacimiento</label><input id="f-nac" name="nacimiento" type="date" max="${today()}" value="${esc(a&&a.nacimiento)}">${a&&a.nacEstimado?'<small>Esta fecha es aproximada.</small>':''}</div><div class="field"><label for="f-edm">Edad en meses</label><input id="f-edm" name="edadMeses" type="number" min="0" max="400" step="1" placeholder="Si llegó de afuera"><small>Si no se sabe la fecha de nacimiento, escriba la edad al llegar.</small></div></div>
+  <div class="row2"><div class="field"><label for="f-raza">Raza</label><input id="f-raza" name="raza" maxlength="60" value="${esc(a&&a.raza)}"></div><div class="field"><label for="f-color">Color</label><input id="f-color" name="color" maxlength="60" value="${esc(a&&a.color)}"></div></div>
+  <div class="row2"><div class="field"><label for="f-peso">Peso (kg)</label><input id="f-peso" name="peso" type="number" min="0" step="0.1" value="${a&&a.peso!==''&&a.peso!=null?a.peso:''}"></div><div class="field"><label for="f-fierro">Fierro o marca</label><input id="f-fierro" name="fierro" maxlength="60" value="${esc(a&&a.fierro)}"></div></div>
+  <div class="field"><label for="f-esp">Otras especificaciones</label><textarea id="f-esp" name="especificaciones" maxlength="500" placeholder="Cuernos, manchas, características…">${esc(a&&a.especificaciones)}</textarea></div>`;
+
+/* Reproducción */
+const REPRO_L={celo:'Celo',prenez:'Preñez confirmada',parto:'Parto',aborto:'Aborto'};
+const esHembraRep=a=>a.sexo==='H'||['Vaca','Cabra'].includes(a.tipo);
+const reprosDe=a=>T('Reproduccion').filter(r=>r.animalId===a.id&&!r.anulado).sort((x,y)=>String(x.fecha+(x.ts||'')).localeCompare(String(y.fecha+(y.ts||''))));
+const gestDias=a=>a.tipo==='Cabra'?150:283;
+function reproEstado(a){
+  if(!esHembraRep(a))return null;const l=reprosDe(a),e=l[l.length-1];if(!e)return null;
+  if(e.tipo==='prenez'){const base=e.base||e.fecha,parto=addDays(base,gestDias(a));return {k:'prenez',txt:'Preñada',cls:'ok',base,parto,dias:dayDiff(today(),parto)}}
+  if(e.tipo==='celo'&&e.servida){const parto=addDays(e.fecha,gestDias(a));return {k:'servida',txt:'Servida, falta confirmar',cls:'warn',base:e.fecha,parto,dias:dayDiff(today(),parto),revisar:addDays(e.fecha,21)}}
+  if(e.tipo==='celo')return {k:'celo',txt:'En celo',cls:'warn',fecha:e.fecha,proximo:addDays(e.fecha,21)};
+  if(e.tipo==='parto')return {k:'parto',txt:'Parida',cls:'n',fecha:e.fecha};
+  return {k:'aborto',txt:'Aborto',cls:'bad',fecha:e.fecha};
+}
+const criasDe=a=>T('Animales').filter(x=>x.madreId===a.id);
+function contCrias(a){const p=reprosDe(a).filter(r=>r.tipo==='parto');return p.length+criasDe(a).filter(c=>!p.some(x=>x.criaId===c.id)).length}
+const animalName=id=>{const a=T('Animales').find(x=>x.id===id);return a?a.nombre+' #'+a.numero:''};
+function reproCard(a){
+  if(!esHembraRep(a)||a.activo===false)return '';
+  const r=reproEstado(a),l=reprosDe(a).slice().reverse();
+  return `<div class="lbl" style="margin:14px 0 6px">Reproducción</div><div class="card" style="padding:10px 12px">
+  <div>${r?pill(r.txt,r.cls):pill('Sin registros','n')} <b>Crías: ${contCrias(a)}</b></div>
+  ${r&&r.parto?`<div class="sub">Parto probable: <b>${fdatey(r.parto)}</b>${r.dias>=0?` (en ${r.dias} día${r.dias===1?'':'s'})`:` (ya pasó hace ${-r.dias} días)`}</div>`:''}
+  ${r&&r.k==='servida'?`<div class="sub">Si no vuelve a mostrar celo entre el ${fdate(addDays(r.base,18))} y el ${fdate(addDays(r.base,24))}, probablemente quedó preñada. Revisar el ${fdate(r.revisar)}.</div>`:''}
+  ${r&&r.k==='celo'?`<div class="sub">Si no se sirve, el próximo celo sería alrededor del ${fdate(r.proximo)}.</div>`:''}
+  ${a.tipo==='Vaca'&&a.ordenoHasta&&r&&(r.k==='prenez'||r.k==='servida')?`<div class="sub">Sale del ordeño el <b>${fdatey(a.ordenoHasta)}</b> (a los 7 meses).</div>`:''}
+  <button class="btn sm" style="margin-top:8px" data-act="newRepro" data-id="${esc(a.id)}">Registrar celo, preñez o parto</button>
+  ${l.length?`<div class="list" style="margin-top:10px">${l.map(e=>`<div class="item"><div class="item-main"><div class="t" style="font-weight:600">${REPRO_L[e.tipo]}${e.servida?' con servicio':''} · ${fdate(e.fecha)}</div><div class="sub">${e.tipo==='prenez'&&e.base?'Servida el '+fdate(e.base)+' · ':''}${e.toro?'Toro: '+esc(e.toro)+' · ':''}${e.criaId?'Cría: '+esc(animalName(e.criaId))+' · ':''}${esc(e.nota||'')} ${esc(e.autor||'')}</div></div><button class="btn sm alt" data-act="reproAnular" data-id="${esc(e.id)}">Anular</button></div>`).join('')}</div>`:''}</div>`;
+}
+async function recargarAnimales(){const r=await api('cargar',{tablas:['Animales']});S.d.Animales=r.datos.Animales}
+function ganadoCards(){
+  const ops=canOps(),out=[];
+  const cg=animals().map(a=>({a,c:cambioGrupo(a)})).filter(x=>x.c&&x.c.dias<=30).sort((x,y)=>x.c.dias-y.c.dias);
+  if(cg.length)out.push(`<div style="margin-bottom:14px"><h2 style="margin:0 0 8px">Cambios de grupo por edad</h2><div class="list">${cg.map(({a,c})=>`<div class="item"><div class="item-main"><div class="t">${esc(a.nombre)} #${esc(a.numero)} ${pill(c.dias<=0?'Ya toca':'En '+c.dias+' días',c.dias<=0?'bad':'warn')}</div><div class="sub">${esc(edadTxt(a))} · pasa de ${esc(c.de.nombre)} a ${esc(c.a.nombre)} (${fdate(c.due)})</div></div>${ops?`<button class="btn sm" data-act="pasarGrupo" data-id="${esc(a.id)}">Pasar a ${esc(c.a.nombre)}</button>`:''}</div>`).join('')}</div></div>`);
+  const pr=animals().map(a=>({a,r:reproEstado(a)})).filter(x=>x.r&&(x.r.k==='prenez'||x.r.k==='servida')).sort((x,y)=>x.r.parto<y.r.parto?-1:1).slice(0,8);
+  if(pr.length)out.push(`<div style="margin-bottom:14px"><h2 style="margin:0 0 8px">Preñadas y partos probables</h2><div class="list">${pr.map(({a,r})=>`<button class="item click" data-act="animal" data-id="${esc(a.id)}"><div class="item-main"><div class="t">${esc(a.nombre)} #${esc(a.numero)} ${pill(r.k==='prenez'?'Preñada':'Por confirmar',r.cls)}</div><div class="sub">Parto probable ${fdatey(r.parto)} · ${r.dias>=0?'en '+r.dias+' días':'pasó hace '+(-r.dias)+' días'}</div></div></button>`).join('')}</div></div>`);
+  return out.join('');
+}
+
+/* Vacas en ordeño (quienes ordeñan ven la lista y marcan las ordeñadas) */
+function vacasOrd(){
+  if(canOps()||isVet())return animals().filter(isOrd).sort((x,y)=>String(x.numero).localeCompare(String(y.numero),'es',{numeric:true})).map(a=>({id:a.id,numero:a.numero,nombre:a.nombre,fotoId:(perfilDe('Animales',a.id)||{}).id||''}));
+  return (S.vacas||[]).slice().sort((x,y)=>String(x.numero).localeCompare(String(y.numero),'es',{numeric:true}));
+}
+function vacasCard(){
+  const l=vacasOrd();
+  return `<div><h2 style="margin-bottom:8px">Vacas en ordeño (${l.length})</h2><div class="list">${l.map(v=>`<div class="item">${v.fotoId?`<div class="avatar pf">${fimg(v.fotoId)}</div>`:`<div class="avatar">${esc(String(v.numero).slice(0,3))}</div>`}<div class="item-main"><div class="t">${esc(v.nombre)}</div><div class="sub">#${esc(v.numero)}</div></div></div>`).join('')||'<div class="item muted">No hay vacas en ordeño registradas.</div>'}</div></div>`;
+}
+const vacasTxt=e=>{
+  const ids=String(e.vacas||'').split(',').filter(Boolean);if(!ids.length)return '';
+  const all=vacasOrd(),nm=ids.map(i=>((all.find(v=>v.id===i)||T('Animales').find(v=>v.id===i))||{}).nombre).filter(Boolean);
+  return `<div class="sub">Ordeñadas ${ids.length} de ${all.length}: ${esc(nm.join(', '))}</div>`;
+};
+
+/* Compras: combustible y cantidades reales */
+const FUEL_L={diesel:'Diésel',regular:'Regular',super:'Súper'};
+const fuelOf=p=>{try{const l=JSON.parse(p.combustible||'[]');return Array.isArray(l)?l:[]}catch(e){return []}};
+const fuelFields=(lines,price)=>['diesel','regular','super'].map(t=>{const x=(lines||[]).find(l=>l.t===t)||{};return `<div class="row2 fuel"><div class="field"><label for="fg-${t}">${FUEL_L[t]}: galones</label><input id="fg-${t}" name="g_${t}" type="number" min="0" step="0.01" value="${x.g||''}"></div>${price?`<div class="field"><label for="fp-${t}">Precio por galón ($)</label><input id="fp-${t}" name="p_${t}" type="number" min="0" step="0.001" value="${x.p==null?'':x.p}"></div>`:'<div></div>'}</div>`}).join('');
+function fuelFromForm(d,price){
+  const arr=[];
+  for(const t of ['diesel','regular','super']){const g=Number(d['g_'+t]);if(!(g>0))continue;const p=price?Number(d['p_'+t]):0;if(price&&!(d['p_'+t]!==''&&isFinite(p)&&p>=0))throw {mensaje:`Escriba el precio por galón del ${FUEL_L[t].toLowerCase()}.`};arr.push({t,g,p})}
+  if(!arr.length)throw {mensaje:'Escriba los galones comprados de al menos un tipo.'};
+  return {arr,texto:arr.map(x=>`${x.g} gal ${FUEL_L[x.t].toLowerCase()}`).join(', '),total:Math.round(arr.reduce((s,x)=>s+x.g*x.p,0)*100)/100};
+}
+function pedItem(p){
+  const e=PED_ESTADO[p.estado]||[p.estado,'n'],ops=canOps(),adm=isAdmin(),fl=fuelOf(p);
+  const acts=[];
+  if(ops&&p.estado!=='recibido')acts.push(`<button class="btn sm" data-act="pedResp" data-id="${esc(p.id)}">${p.estado==='pendiente'?'Responder':'Anotar compra'}</button>`);
+  if(!ops&&p.creadoPor===S.user.nombre&&(p.estado==='aprobado'||p.estado==='comprado'))acts.push(`<button class="btn sm" data-act="pedRecibido" data-id="${esc(p.id)}">Ya lo recibí</button>`);
+  if(ops&&(p.estado==='aprobado'||p.estado==='comprado'))acts.push(`<button class="btn sm alt" data-act="pedRecibido" data-id="${esc(p.id)}">Marcar recibido</button>`);
+  if(pedPuedeEditar(p)&&p.estado!=='recibido')acts.push(`<button class="btn sm alt" data-act="pedEdit" data-id="${esc(p.id)}">Corregir</button>`);
+  return `<div class="item" style="align-items:flex-start"><div class="item-main"><div class="t">${esc(p.titulo)} ${pill(e[0],e[1])}${p.urgencia==='urgente'?pill('Urgente','bad'):''}</div>
+  <div class="sub">${esc(p.tipo)}${p.cantidad?' · pidió '+esc(p.cantidad):''} · de ${esc(p.creadoPor)} (${esc(ROL[p.origen]||p.origen)}) · ${fdate(p.fecha)}${p.refModulo==='Vehiculos'&&vehName(p.refId)?' · para '+esc(vehName(p.refId)):''}</div>
+  ${p.detalle?`<div class="note">${esc(p.detalle)}</div>`:''}${p.comprado?`<div class="sub"><b>Se compró:</b> ${esc(p.comprado)}</div>`:''}${p.respuesta?`<div class="sub"><b>Respuesta${p.atendidoPor?' de '+esc(p.atendidoPor):''}:</b> ${esc(p.respuesta)}</div>`:''}${p.recibidoPor?`<div class="sub">Recibido por ${esc(p.recibidoPor)} el ${fdate(p.recibidoFecha)}</div>`:''}
+  ${adm&&fl.length?`<div class="sub num">${fl.map(x=>`${FUEL_L[x.t]} ${x.g} gal × ${money(x.p)} = ${money(x.g*x.p)}`).join(' · ')}</div>`:''}${adm&&p.costo!==''&&p.costo!=null?`<div class="sub num"><b>Costo total ${money(p.costo)}</b></div>`:''}${pedFotos(p)}</div>
+  <div style="display:flex;flex-direction:column;gap:4px">${acts.join('')}</div></div>`;
+}
+
+/* Comentarios: se ven todas las fotos de cada comentario */
+function cmtHtml(c,etq){
+  const fl=T('Fotos').filter(f=>f.comentarioId===c.id).map(f=>f.id);if(!fl.length&&c.fotoId)fl.push(c.fotoId);
+  return `<div class="cmt"><div class="sub"><b>${esc(c.autor)}</b> · ${esc(ROL[c.rol]||'')} · ${esc(ftime(c.ts))}${etq&&c.etiqueta?' · '+esc(c.etiqueta):''}</div>${c.texto?`<div>${esc(c.texto)}</div>`:''}${fl.length?`<div class="frow">${fl.map(id=>`<button class="foto mini" type="button" data-act="verfoto" data-id="${esc(id)}" aria-label="Ver foto">${fimg(id)}</button>`).join('')}</div>`:''}${canFix(c.autor,c.ts)?`<div><button class="btn sm alt" data-act="fix" data-t="Comentarios" data-id="${esc(c.id)}">Corregir</button></div>`:''}</div>`;
+}
+function misCard(){
+  const l=T('Comentarios').filter(c=>c.autor===S.user.nombre).sort((a,b)=>String(b.ts).localeCompare(String(a.ts))).slice(0,5);
+  return `<div><h2 style="margin-bottom:8px">Mis comentarios y fotos</h2><div class="list">${l.map(c=>`<div class="item" style="align-items:flex-start"><div class="item-main">${cmtHtml(c,true)}</div></div>`).join('')||'<div class="item muted">Todavía no ha dejado comentarios.</div>'}</div></div>`;
+}
+
+/* Vehículos, maquinaria y parcelas: perfil con foto y especificaciones */
+const mngEnt=()=>canOps()||S.user.rol==='mecanico';
+const specRow=(k,v)=>v!==''&&v!=null?`<dt>${k}</dt><dd>${esc(v)}</dd>`:'';
+function entSheet(m,id){
+  const e=T(m).find(x=>x.id===id);if(!e){closeSheet();return}
+  const veh=m==='Vehiculos';
+  openSheet(sheetTop(esc(e.nombre))+`<div style="display:flex;gap:12px;align-items:center;margin-bottom:10px">${avatar(m,e.id,(e.nombre||'?').slice(0,2),'big')}<div>${pill(e.estado||'Operativo',e.estado==='Operativo'?'ok':'bad')}<div class="sub muted">${esc(e.tipo||'')}${e.placa?' · placa '+esc(e.placa):''}</div></div></div>
+  <dl class="kv">${specRow('Marca',e.marca)}${specRow('Modelo',e.modelo)}${specRow('Año',e.anio)}${veh?specRow('Combustible',e.combustible)+specRow('Capacidad',e.capacidad):specRow('Serie',e.serie)+specRow('Ubicación',e.ubicacion)}${specRow('Próxima revisión',e.proximaRevision?fdatey(e.proximaRevision):'')}</dl>
+  ${e.especificaciones?`<div class="note" style="margin-top:10px;background:var(--surface-2);border-radius:6px;padding:8px">${esc(e.especificaciones)}</div>`:''}${e.nota?`<div class="sub" style="margin-top:6px">${esc(e.nota)}</div>`:''}
+  ${mngEnt()?`<div class="toolbar" style="margin-top:10px"><button class="btn sm alt" data-act="${veh?'editVeh':'editEquipo'}" data-id="${esc(e.id)}">Editar datos y especificaciones</button></div>`:''}
+  ${galeriaHtml(m,e.id)}${cmtBlock(m,e.id,0)}`,()=>entSheet(m,id));
+}
+const vehFields=v=>`<div class="field"><label for="f-vn">Nombre</label><input id="f-vn" name="nombre" required maxlength="60" value="${esc(v&&v.nombre)}"></div>
+  <div class="row2"><div class="field"><label for="f-vt">Tipo</label><select id="f-vt" name="tipo">${opts(['Camión','Moto','Moto con cama','Otro'].map(x=>[x,x]),v&&v.tipo)}</select></div><div class="field"><label for="f-vp">Placa</label><input id="f-vp" name="placa" maxlength="20" value="${esc(v&&v.placa)}"></div></div>
+  <div class="row2"><div class="field"><label for="f-vm">Marca</label><input id="f-vm" name="marca" maxlength="40" value="${esc(v&&v.marca)}"></div><div class="field"><label for="f-vmo">Modelo</label><input id="f-vmo" name="modelo" maxlength="40" value="${esc(v&&v.modelo)}"></div></div>
+  <div class="row2"><div class="field"><label for="f-va">Año</label><input id="f-va" name="anio" maxlength="4" inputmode="numeric" value="${esc(v&&v.anio)}"></div><div class="field"><label for="f-vc">Combustible</label><select id="f-vc" name="combustible"><option value="">—</option>${opts(['Diésel','Regular','Súper','Otro'].map(x=>[x,x]),v&&v.combustible)}</select></div></div>
+  <div class="field"><label for="f-vca">Capacidad o potencia</label><input id="f-vca" name="capacidad" maxlength="60" value="${esc(v&&v.capacidad)}" placeholder="Ej. 3 toneladas, 150 cc"></div>
+  <div class="row2"><div class="field"><label for="f-vs">Estado</label><select id="f-vs" name="estado">${opts(['Operativo','Con falla','En revisión','En taller'].map(x=>[x,x]),v?v.estado:'Operativo')}</select></div><div class="field"><label for="f-vr">Próxima revisión</label><input id="f-vr" name="proximaRevision" type="date" value="${esc(v&&v.proximaRevision)}"></div></div>
+  <div class="field"><label for="f-ves">Otras especificaciones</label><textarea id="f-ves" name="especificaciones" maxlength="500">${esc(v&&v.especificaciones)}</textarea></div>
+  <div class="field"><label for="f-vo">Nota</label><textarea id="f-vo" name="nota" maxlength="300">${esc(v&&v.nota)}</textarea></div>${fotoField('f-pf1',1,'Foto de perfil')}`;
+const equipoFields=e=>`<div class="field"><label for="f-name">Nombre</label><input id="f-name" name="nombre" required maxlength="80" value="${esc(e&&e.nombre)}"></div>
+  <div class="row2"><div class="field"><label for="f-type">Tipo</label><input id="f-type" name="tipo" maxlength="60" placeholder="Ej. Maquinaria agrícola" value="${esc(e&&e.tipo)}"></div><div class="field"><label for="f-loc">Ubicación</label><input id="f-loc" name="ubicacion" maxlength="60" value="${esc(e&&e.ubicacion)}"></div></div>
+  <div class="row2"><div class="field"><label for="f-em">Marca</label><input id="f-em" name="marca" maxlength="40" value="${esc(e&&e.marca)}"></div><div class="field"><label for="f-emo">Modelo</label><input id="f-emo" name="modelo" maxlength="40" value="${esc(e&&e.modelo)}"></div></div>
+  <div class="row2"><div class="field"><label for="f-ea">Año</label><input id="f-ea" name="anio" maxlength="4" inputmode="numeric" value="${esc(e&&e.anio)}"></div><div class="field"><label for="f-es">Número de serie</label><input id="f-es" name="serie" maxlength="60" value="${esc(e&&e.serie)}"></div></div>
+  <div class="row2"><div class="field"><label for="f-st">Estado</label><select id="f-st" name="estado">${opts(['Operativo','Con falla','En revisión','En taller'].map(x=>[x,x]),e?e.estado:'Operativo')}</select></div><div class="field"><label for="f-rev">Próxima revisión</label><input id="f-rev" name="proximaRevision" type="date" value="${esc(e&&e.proximaRevision)}"></div></div>
+  <div class="field"><label for="f-esp2">Otras especificaciones</label><textarea id="f-esp2" name="especificaciones" maxlength="500" placeholder="Potencia, implementos, aceite…">${esc(e&&e.especificaciones)}</textarea></div>
+  <div class="field"><label for="f-note">Nota</label><textarea id="f-note" name="nota" maxlength="300">${esc(e&&e.nota)}</textarea></div>${fotoField('f-pf1',1,'Foto de perfil')}`;
+const vehPayload=d=>({nombre:d.nombre,tipo:d.tipo,placa:d.placa||'',marca:d.marca||'',modelo:d.modelo||'',anio:d.anio||'',combustible:d.combustible||'',capacidad:d.capacidad||'',estado:d.estado,proximaRevision:d.proximaRevision||'',especificaciones:d.especificaciones||'',nota:d.nota||''});
+const eqPayload=d=>({nombre:d.nombre,tipo:d.tipo||'',ubicacion:d.ubicacion||'',marca:d.marca||'',modelo:d.modelo||'',anio:d.anio||'',serie:d.serie||'',estado:d.estado,proximaRevision:d.proximaRevision||'',especificaciones:d.especificaciones||'',nota:d.nota||''});
+
+V.vehiculos=()=>{
+  const mng=mngEnt(),l=T('Vehiculos').filter(v=>v.activo!==false);
+  return `<div class="pagehead"><div><h1>Vehículos</h1><p>Camión y motos. Cualquiera puede avisar de una falla con comentario y foto.</p></div>${mng?'<button class="btn" data-act="newVeh">Nuevo vehículo</button>':''}</div>
+  <div class="stack">${l.map(v=>{
+    const ok=v.estado==='Operativo',ped=T('Pedidos').filter(p=>p.refModulo==='Vehiculos'&&p.refId===v.id&&['pendiente','aprobado','comprado'].includes(p.estado)).length;
+    return `<div class="card"><div style="display:flex;gap:12px;align-items:center">${avatar('Vehiculos',v.id,(v.nombre||'?').slice(0,2))}<div style="flex:1;min-width:0"><h3>${esc(v.nombre)}</h3><div class="sub muted" style="font-size:14px">${esc([v.tipo,v.marca,v.modelo,v.anio].filter(Boolean).join(' · '))}${v.placa?' · placa '+esc(v.placa):''}</div></div>${pill(v.estado||'Operativo',ok?'ok':'bad')}</div>
+    ${v.nota?`<div class="note" style="margin-top:8px;background:var(--surface-2);border-radius:6px;padding:6px 8px">${esc(v.nota)}</div>`:''}${v.proximaRevision?`<div class="sub" style="margin-top:6px">Próxima revisión ${fdate(v.proximaRevision)}</div>`:''}${ped?`<div class="sub" style="margin-top:6px">${pill(ped+' pedido'+(ped>1?'s':'')+' abierto'+(ped>1?'s':''),'warn')}</div>`:''}
+    ${cmtBlock('Vehiculos',v.id,2)}
+    <div class="toolbar" style="margin:10px 0 0"><button class="btn sm alt" data-act="entSheet" data-m="Vehiculos" data-id="${esc(v.id)}">Detalles, fotos y especificaciones</button>${mng?`<button class="btn sm alt" data-act="editVeh" data-id="${esc(v.id)}">Cambiar estado</button><button class="btn sm alt" data-act="newPedido" data-veh="${esc(v.id)}">Pedir repuesto</button>`:''}</div></div>`}).join('')||`<div class="card muted">Todavía no hay vehículos.${mng?` <button class="btn sm" style="margin-top:8px" data-act="vehBase">Agregar camión, moto y moto con cama</button>`:''}</div>`}</div>`;
+};
+V.equipos=()=>{
+  const mng=mngEnt(),ops=canOps();
+  return `<div class="pagehead"><div><h1>Maquinaria y equipos</h1><p>Estado, revisiones, especificaciones y reparaciones.</p></div>${mng?'<button class="btn" data-act="newEquipo">Nuevo equipo</button>':''}</div>
+  <div class="stack">${T('Equipos').filter(e=>e.activo!==false).map(e=>`<div class="card"><div style="display:flex;gap:12px;align-items:center">${avatar('Equipos',e.id,(e.nombre||'?').slice(0,2))}<div style="flex:1;min-width:0"><h3>${esc(e.nombre)}</h3><div class="sub muted" style="font-size:14px">${esc([e.tipo,e.marca,e.modelo,e.anio].filter(Boolean).join(' · '))}${e.ubicacion?' · '+esc(e.ubicacion):''}${e.proximaRevision?' · próxima revisión '+fdate(e.proximaRevision):''}</div></div>${pill(e.estado||'Operativo',e.estado==='Operativo'?'ok':'bad')}</div>
+    ${e.nota?`<div class="note" style="margin-top:8px;background:var(--surface-2);border-radius:6px;padding:6px 8px">${esc(e.nota)}</div>`:''}${cmtBlock('Equipos',e.id,2)}
+    <div class="toolbar" style="margin:10px 0 0"><button class="btn sm alt" data-act="entSheet" data-m="Equipos" data-id="${esc(e.id)}">Detalles, fotos y especificaciones</button>${mng?`<button class="btn sm alt" data-act="editEquipo" data-id="${esc(e.id)}">Editar</button>`:''}${ops&&e.estado==='Con falla'?(e.tareaId&&T('Tareas').some(t=>t.id===e.tareaId)?pill('Tarea creada','ok'):`<button class="btn sm" data-act="eqTask" data-id="${esc(e.id)}">Convertir en tarea</button>`):''}</div></div>`).join('')||'<div class="card muted">No hay equipos registrados.</div>'}</div>`;
+};
+
+/* ───────── Formularios y acciones 3.1 ───────── */
+Object.assign(FORMS,{
+  async comentar(d,f){
+    const fotos=await leerFotos(f);
+    if(!String(d.texto||'').trim()&&!fotos.length)throw {mensaje:'Escriba un comentario o tome una foto.'};
+    const r=await api('comentarioCrear',{modulo:f.dataset.m,refId:f.dataset.r||'',texto:d.texto||'',fotos});
+    upsert('Comentarios',r.fila);(r.fotos||[]).forEach((x,i)=>{upsert('Fotos',x);if(fotos[i])S.fc[x.id]=fotos[i]});
+    toast('Comentario guardado');refreshSheet();
+  },
+  async pedido(d,f){
+    const fotos=await leerFotos(f);
+    const r=await api('pedidoCrear',{tipo:d.tipo,titulo:d.titulo,detalle:d.detalle||'',cantidad:d.cantidad||'',urgencia:d.urgencia||'normal',refModulo:f.dataset.veh?'Vehiculos':'',refId:f.dataset.veh||'',fotos});
+    upsert('Pedidos',r.fila);(r.fotos||[]).forEach((x,i)=>{upsert('Fotos',x);if(fotos[i])S.fc[x.id]=fotos[i]});
+    closeSheet();render();toast('Pedido enviado');
+  },
+  async emergencia(d,f){
+    if(!String(d.paso||'').trim()&&!String(d.dado||'').trim())throw {mensaje:'Cuente qué ocurrió y qué se le dio.'};
+    const fotos=await leerFotos(f),a=d.animalId?T('Animales').find(x=>x.id===d.animalId):null;
+    const resumen=`Ocurrió: ${d.paso}. Se le dio: ${d.dado||'—'}. Tratamiento: ${d.trat||'—'}.`;
+    let trId='';
+    if(a){
+      const t=await add('Tratamientos',{titulo:'Emergencia: '+String(d.paso).slice(0,50),alcance:'animal',objetivo:a.id,fechaProgramada:today(),fechaAplicada:today(),responsable:S.user.nombre,nota:`Se le dio: ${d.dado||'—'}. Tratamiento: ${d.trat||'—'}.`});
+      trId=t.id;await hist(a.id,'Emergencia. '+resumen);
+    }
+    await add('Avisos',{fecha:today(),turno:'',animal:a?a.nombre+' #'+a.numero:(d.otro||'Varios animales'),animalId:a?a.id:'',tipo:'emergencia',nota:resumen,estado:'atendido',atendidoPor:S.user.nombre,atendidoFecha:today()});
+    if(fotos.length){const r=await api('comentarioCrear',{modulo:trId?'Tratamientos':'General',refId:trId,texto:'Emergencia: '+d.paso,fotos});upsert('Comentarios',r.fila);(r.fotos||[]).forEach((x,i)=>{upsert('Fotos',x);S.fc[x.id]=fotos[i]})}
+    closeSheet();render();toast('Emergencia registrada');
+  },
+  async fotosAdd(d,f){
+    const fotos=await leerFotos(f);if(!fotos.length)throw {mensaje:'Tome o elija al menos una foto.'};
+    await subirFotosA(f.dataset.m,f.dataset.r,fotos,d.desc||'');toast('Fotos guardadas');refreshSheet();
+  },
+  async veh(d,f){
+    const dt=vehPayload(d);let id=f.dataset.id;
+    if(id)await upd('Vehiculos',id,dt);else id=(await add('Vehiculos',Object.assign(dt,{activo:true}))).id;
+    await subirPerfil(f,'Vehiculos',id);closeSheet();render();toast('Vehículo guardado');
+  },
+  async newEquipo(d,f){const e=await add('Equipos',Object.assign(eqPayload(d),{tareaId:'',activo:true}));await subirPerfil(f,'Equipos',e.id);closeSheet();render();toast('Equipo registrado')},
+  async editEquipo(d,f){await upd('Equipos',f.dataset.id,eqPayload(d));await subirPerfil(f,'Equipos',f.dataset.id);closeSheet();render();toast('Equipo actualizado')},
+  async parcela(d,f){
+    const dt={nombre:d.nombre.trim(),uso:d.uso,area:d.area===''?'':Number(d.area),unidad:d.unidad,descripcion:d.descripcion||'',notas:d.notas||'',activo:d.activa==='1'};let id=f.dataset.id;
+    if(id){await upd('Parcelas',id,dt);const fresh=await api('cargar',{tablas:['Tareas','Cultivos']});S.d.Tareas=fresh.datos.Tareas||S.d.Tareas;S.d.Cultivos=fresh.datos.Cultivos||S.d.Cultivos}
+    else id=(await add('Parcelas',Object.assign(dt,{activo:true}))).id;
+    await subirPerfil(f,'Parcelas',id);closeSheet();render();toast('Parcela guardada');
+  },
+  async repro(d,f){
+    const body={animalId:f.dataset.id,tipo:d.tipo,fecha:d.fecha,nota:d.nota||''};
+    if(d.tipo==='celo'){body.servida=!!new FormData(f).get('servida');body.toro=d.toro||''}
+    if(d.tipo==='prenez'){body.base=d.base||d.fecha;body.toro=d.toro||''}
+    if(d.tipo==='parto')body.criaId=d.criaId||'';
+    await add('Reproduccion',body);await recargarAnimales();
+    const a=T('Animales').find(x=>x.id===f.dataset.id),r=reproEstado(a);
+    closeSheet();render();animalSheet(a.id);
+    toast(r&&(r.k==='prenez'||r.k==='servida')&&a.tipo==='Vaca'&&a.ordenoHasta?`Parto probable ${fdate(r.parto)}. Sale del ordeño el ${fdate(a.ordenoHasta)}.`:'Registrado');
+  },
+  async reglas(d){
+    for(const g of T('Grupos')){
+      const m=String(d['m_'+g.id]||'').trim(),s=d['s_'+g.id]||'';
+      if((String(g.mesesMax||'')!==m)||((g.siguienteId||'')!==s))await upd('Grupos',g.id,{mesesMax:m===''?'':Number(m),siguienteId:s});
+    }
+    closeSheet();render();toast('Reglas de edad guardadas');
+  },
+  async pedResp(d,f){
+    const p=T('Pedidos').find(x=>x.id===f.dataset.id),ch={estado:d.estado,respuesta:d.respuesta||'',comprado:d.comprado||''};
+    if(isAdmin()){
+      if(p.tipo==='Combustible'){const lines=['diesel','regular','super'].some(t=>Number(d['g_'+t])>0);if(lines){const fu=fuelFromForm(d,true);ch.combustible=fu.arr;ch.comprado=ch.comprado||fu.texto;if(d.costo==='')ch.costo=fu.total}}
+      if(d.costo!=='')ch.costo=Number(d.costo);
+    }
+    const r=await api('pedidoActualizar',{id:f.dataset.id,cambios:ch});upsert('Pedidos',r.fila);closeSheet();render();toast('Pedido actualizado');
+  },
+  async combustible(d,f){
+    const adm=isAdmin(),fu=fuelFromForm(d,adm),veh=d.veh?T('Vehiculos').find(v=>v.id===d.veh):null;
+    const r=await api('pedidoCrear',{tipo:'Combustible',titulo:'Combustible'+(veh?' para '+veh.nombre:''),cantidad:fu.texto,detalle:d.nota||'',refModulo:veh?'Vehiculos':'',refId:veh?veh.id:''});
+    const ch={estado:'comprado',comprado:fu.texto};if(adm){ch.costo=fu.total;ch.combustible=fu.arr}
+    const r2=await api('pedidoActualizar',{id:r.fila.id,cambios:ch});upsert('Pedidos',r2.fila);closeSheet();render();toast('Compra de combustible anotada');
+  }
+});
+Object.assign(ACTS,{
+  entSheet:el=>entSheet(el.dataset.m,el.dataset.id),
+  fperfil:el=>act(async()=>{const r=await api('fotoPerfil',{id:el.dataset.id});T('Fotos').forEach(q=>{if(q.modulo===r.fila.modulo&&q.refId===r.fila.refId)q.perfil=false});upsert('Fotos',r.fila);const fn=S.sheetFn;render();if(fn)fn();toast('Foto de perfil actualizada')}),
+  addFotos:el=>openSheet(sheetTop('Agregar fotos')+`<form data-form="fotosAdd" data-m="${el.dataset.m}" data-r="${esc(el.dataset.r)}">${fotoField('f-af')}<div class="field"><label for="f-afd">Descripción (opcional)</label><input id="f-afd" name="desc" maxlength="100"></div><button class="btn" type="submit">Guardar fotos</button></form>`),
+  newVeh:()=>openSheet(formWrap('Nuevo vehículo','veh',vehFields(null))),
+  editVeh:el=>{const v=T('Vehiculos').find(x=>x.id===el.dataset.id);openSheet(formWrap('Vehículo: '+esc(v.nombre),'veh',vehFields(v),v.id))},
+  newEquipo:()=>openSheet(formWrap('Nuevo equipo','newEquipo',equipoFields(null))),
+  editEquipo:el=>{const e=T('Equipos').find(x=>x.id===el.dataset.id);openSheet(formWrap('Editar '+esc(e.nombre),'editEquipo',equipoFields(e),e.id))},
+  vacasTodas:el=>{const bx=[...el.closest('form').querySelectorAll('input[name=vaca]')],all=bx.every(b=>b.checked);bx.forEach(b=>{b.checked=!all})},
+  pasarGrupo:el=>act(async()=>{const a=T('Animales').find(x=>x.id===el.dataset.id),c=cambioGrupo(a);if(!c)return;await upd('Animales',a.id,{grupoId:c.a.id,grupoDesde:today()});await hist(a.id,'Pasó al grupo '+c.a.nombre+' por su edad');render();toast(a.nombre+' pasó a '+c.a.nombre)}),
+  reglasEdad:()=>openSheet(formWrap('Reglas de edad por grupo','reglas',`<p class="muted" style="margin:0 0 12px;font-size:14px">Ejemplo: Chivitos pasan a Chivos a los 6 meses; Chivos pasan a Vacas a los 15 meses. Deje vacío el grupo que no cambia por edad. Solo se avisa: el cambio lo confirma una persona.</p>${T('Grupos').filter(g=>g.activo!==false).map(g=>`<div class="row2"><div class="field"><label for="m-${esc(g.id)}">${esc(g.nombre)}: meses</label><input id="m-${esc(g.id)}" name="m_${esc(g.id)}" type="number" min="1" max="600" value="${g.mesesMax||''}"></div><div class="field"><label for="s-${esc(g.id)}">Pasa a</label><select id="s-${esc(g.id)}" name="s_${esc(g.id)}"><option value="">Ninguno</option>${opts(T('Grupos').filter(x=>x.activo!==false&&x.id!==g.id).map(x=>[x.id,x.nombre]),g.siguienteId)}</select></div></div>`).join('')}`)),
+  newRepro:el=>{const a=T('Animales').find(x=>x.id===el.dataset.id),sinVin=criasDe(a).filter(c=>!reprosDe(a).some(r=>r.criaId===c.id));
+    openSheet(formWrap('Reproducción de '+esc(a.nombre),'repro',`<div class="field"><label for="f-rt2">Qué se registra</label><select id="f-rt2" name="tipo">${opts([['celo','Celo'],['prenez','Preñez confirmada'],['parto','Parto'],['aborto','Aborto']])}</select></div>
+    <div class="field"><label for="f-rf">Fecha</label><input id="f-rf" name="fecha" type="date" value="${today()}" max="${today()}" required></div>
+    <div class="rp rp-celo"><div class="checks" style="margin-bottom:12px"><label for="f-rs"><input id="f-rs" type="checkbox" name="servida">Se le dio servicio (monta o inseminación)</label></div></div>
+    <div class="rp rp-celo rp-prenez"><div class="field"><label for="f-rto">Toro o semen</label><input id="f-rto" name="toro" maxlength="80" list="dl-toros"><datalist id="dl-toros">${T('Animales').filter(x=>x.tipo==='Toro'||x.tipo==='Novillo').map(x=>`<option value="${esc(x.nombre)}">`).join('')}</datalist></div></div>
+    <div class="rp rp-prenez"><div class="field"><label for="f-rb">Fecha del servicio</label><input id="f-rb" name="base" type="date" max="${today()}"><small>Si no se sabe, se usa la fecha de hoy. El parto se calcula desde el servicio.</small></div></div>
+    <div class="rp rp-parto"><div class="field"><label for="f-rc">Cría</label><select id="f-rc" name="criaId"><option value="">Aún no registrada</option>${opts(sinVin.map(c=>[c.id,c.nombre+' #'+c.numero]))}</select></div></div>
+    <div class="field"><label for="f-rn">Nota</label><textarea id="f-rn" name="nota" maxlength="300"></textarea></div>
+    <div class="hint">Al servir o confirmar la preñez de una vaca se programa su salida del ordeño a los 7 meses.</div>`,a.id,'Guardar'));
+    reproToggle($('#panel form'))},
+  reproAnular:el=>act(async()=>{const r=await upd('Reproduccion',el.dataset.id,{anulado:true});await recargarAnimales();const fn=S.sheetFn;render();if(fn)fn();toast('Registro anulado')})
+});
+function reproToggle(f){if(!f)return;const t=f.querySelector('[name=tipo]').value;f.querySelectorAll('.rp').forEach(x=>{x.hidden=!x.classList.contains('rp-'+t)})}
+document.addEventListener('change',e=>{const f=e.target.closest&&e.target.closest('form[data-form="repro"]');if(f&&e.target.name==='tipo')reproToggle(f)});
+
+const avisoAnimal=a=>{if(a.animalId)return a.animalId;const q=String(a.animal||'').replace('#','').trim().toLowerCase();const x=animals().find(z=>String(z.numero).toLowerCase()===q||String(z.nombre).toLowerCase()===q);return x?x.id:''};
+Object.assign(ACTS,{
+  newCombustible:()=>openSheet(formWrap('Compra de combustible','combustible',`<div class="field"><label for="f-cv">Vehículo (opcional)</label><select id="f-cv" name="veh"><option value="">Ninguno o varios</option>${opts(T('Vehiculos').filter(v=>v.activo!==false).map(v=>[v.id,v.nombre]))}</select></div>${fuelFields(null,isAdmin())}<div class="field"><label for="f-cn">Nota</label><textarea id="f-cn" name="nota" maxlength="300"></textarea></div>${isAdmin()?'':'<p class="muted" style="font-size:14px">El administrador anota el precio.</p>'}`,'','Guardar compra')),
+  pedResp:el=>{const p=T('Pedidos').find(x=>x.id===el.dataset.id),adm=isAdmin();openSheet(formWrap('Responder pedido','pedResp',`<p style="margin:0 0 10px;font-weight:700">${esc(p.titulo)}${p.cantidad?' (pidió '+esc(p.cantidad)+')':''} · pidió ${esc(p.creadoPor)}</p>
+    <div class="field"><label for="f-pe">Estado</label><select id="f-pe" name="estado">${opts([['aprobado','Aprobado, se va a comprar'],['comprado','Ya se compró'],['recibido','Ya llegó'],['rechazado','No se aprueba'],['pendiente','Dejar pendiente']],p.estado==='pendiente'?'aprobado':p.estado)}</select></div>
+    <div class="field"><label for="f-pcm">Qué se compró en realidad</label><input id="f-pcm" name="comprado" maxlength="200" value="${esc(p.comprado)}" placeholder="Ej. 2 frascos de 500 ml"><small>Si fue distinto a lo pedido, anótelo aquí.</small></div>
+    ${p.tipo==='Combustible'?fuelFields(fuelOf(p),adm):''}
+    <div class="field"><label for="f-pr">Respuesta</label><textarea id="f-pr" name="respuesta" maxlength="300">${esc(p.respuesta)}</textarea></div>
+    ${adm?`<div class="field"><label for="f-pc">Costo total ($)</label><input id="f-pc" name="costo" type="number" min="0" step="0.01" value="${p.costo===''||p.costo==null?'':p.costo}"><small>Solo los administradores ven el costo.</small></div>`:''}`,p.id))}
+});
 
 /* ───────── Arranque ───────── */
 (async function init(){
