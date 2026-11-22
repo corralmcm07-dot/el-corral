@@ -429,7 +429,7 @@ function animalSheet(id){
   const ord=!vt&&!baja&&a.tipo==='Vaca'?`<div class="lbl" style="margin:14px 0 6px">Ordeño</div><div class="card" style="padding:10px 12px"><div class="sub">${a.ordenoDesde?'Ordeña desde el '+fdatey(a.ordenoDesde):'Sin fecha de inicio'} · ${a.ordenoHasta?'reposo el '+fdatey(a.ordenoHasta):'sin fecha de reposo'}</div>${o?`<div style="margin-top:6px">${pill(o.txt,o.cls)}</div>`:''}<button class="btn sm alt" style="margin-top:8px" data-act="ordEdit" data-id="${esc(a.id)}">Cambiar fechas</button></div>`:'';
   openSheet(sheetTop(`${esc(a.nombre)} · #${esc(a.numero)}`)+`
   ${baja?`<div class="errbox">De baja el ${fdatey(a.bajaFecha)} · ${esc(a.bajaMotivo||'sin motivo')}${a.bajaNota?'. '+esc(a.bajaNota):''}${!vt?`<div style="margin-top:8px"><button class="btn sm alt" data-act="reactivar" data-id="${esc(a.id)}">Reactivar</button></div>`:''}</div>`:''}
-  <div style="display:flex;gap:12px;align-items:center;margin-bottom:10px">${avatar('Animales',a.id,String(a.numero).slice(0,3),'big')}<div>${pill(baja?'De baja':'Activo',baja?'bad':'ok')}</div></div>
+  <div style="display:flex;gap:12px;align-items:center;margin-bottom:10px">${avatar('Animales',a.id,String(a.numero).slice(0,3),'big')}<div>${pill(baja?'De baja':'Activo',baja?'bad':'ok')}<div>${perfilBtn('Animales',a.id)}</div></div></div>
   <dl class="kv"><dt>Tipo</dt><dd>${esc(a.tipo)}${a.sexo?' · '+(a.sexo==='H'?'Hembra':'Macho'):''}</dd><dt>Grupo</dt><dd>${esc(gname(a.grupoId))}</dd><dt>Ingreso o nacimiento</dt><dd>${fdatey(a.fechaIngreso)}</dd><dt>En este grupo desde</dt><dd>${fdatey(a.grupoDesde)}</dd><dt>Edad</dt><dd>${esc(edadTxt(a))}</dd>${a.nacimiento?`<dt>Nacimiento${a.nacEstimado?' (aprox.)':''}</dt><dd>${fdatey(a.nacimiento)}</dd>`:''}${(()=>{const c=cambioGrupo(a);return c?`<dt>Cambio de grupo</dt><dd>${c.dias<=0?'Ya toca':'En '+c.dias+' días'} → ${esc(c.a.nombre)} (${fdate(c.due)})</dd>`:''})()}${specRow('Raza',a.raza)}${specRow('Color',a.color)}${specRow('Peso',a.peso!==''&&a.peso!=null?a.peso+' kg':'')}${specRow('Fierro',a.fierro)}${crias.length?`<dt>Crías (${crias.length})</dt><dd style="display:flex;flex-wrap:wrap;gap:6px">${crias.map(c=>`<button class="btn sm alt" data-act="animal" data-id="${esc(c.id)}">${esc(c.nombre)} #${esc(c.numero)}</button>`).join('')}</dd>`:''}</dl>
   <div class="lbl" style="margin:14px 0 4px">Antecedentes</div>${genHtml(a)}
   ${a.observaciones?`<div class="note" style="margin-top:10px;background:var(--surface-2);border-radius:6px;padding:8px">${esc(a.observaciones)}</div>`:''}
@@ -460,16 +460,11 @@ async function getFoto(id){
 }
 function cargarMiniaturas(){lazyFotos()}
 function reducirFoto(file){
+  const fin=(src,w,h)=>{const k=Math.min(1,1024/Math.max(w,h)),c=document.createElement('canvas');c.width=Math.max(1,Math.round(w*k));c.height=Math.max(1,Math.round(h*k));c.getContext('2d').drawImage(src,0,0,c.width,c.height);const d=c.toDataURL('image/jpeg',0.7);c.width=c.height=0;return d};
+  const mal0={mensaje:'No se pudo leer la foto. Pruebe con otra.'};
   return new Promise((ok,mal)=>{
-    const url=URL.createObjectURL(file),im=new Image();
-    im.onload=()=>{
-      const k=Math.min(1,1280/Math.max(im.naturalWidth,im.naturalHeight)),c=document.createElement('canvas');
-      c.width=Math.max(1,Math.round(im.naturalWidth*k));c.height=Math.max(1,Math.round(im.naturalHeight*k));
-      c.getContext('2d').drawImage(im,0,0,c.width,c.height);URL.revokeObjectURL(url);
-      ok(c.toDataURL('image/jpeg',0.72));
-    };
-    im.onerror=()=>{URL.revokeObjectURL(url);mal({mensaje:'No se pudo leer la foto. Pruebe con otra.'})};
-    im.src=url;
+    const viaImg=()=>{const url=URL.createObjectURL(file),im=new Image();im.onload=()=>{try{ok(fin(im,im.naturalWidth,im.naturalHeight))}catch(e){mal(mal0)}finally{URL.revokeObjectURL(url);im.src=''}};im.onerror=()=>{URL.revokeObjectURL(url);mal(mal0)};im.src=url};
+    if(window.createImageBitmap)createImageBitmap(file,{imageOrientation:'from-image'}).then(b=>{try{ok(fin(b,b.width,b.height))}catch(e){mal(mal0)}finally{if(b.close)b.close()}}).catch(viaImg);else viaImg();
   });
 }
 function subirFoto(inp){
@@ -1035,12 +1030,26 @@ document.addEventListener('click',e=>{
   e.preventDefault();
   const f=ACTS[el.dataset.act];if(f)f(el);
 });
+const DRAFT='corral-borrador';
+function draftSave(f){try{const o={n:f.dataset.form,i:f.dataset.id||'',t:Date.now(),v:{}};f.querySelectorAll('input,select,textarea').forEach(e=>{if(!e.name||e.type==='file'||e.type==='password')return;if(e.type==='checkbox'||e.type==='radio'){if(e.checked)(o.v[e.name]=o.v[e.name]||[]).push(e.value)}else o.v[e.name]=e.value});localStorage.setItem(DRAFT,JSON.stringify(o))}catch(x){}}
+function draftClear(){try{localStorage.removeItem(DRAFT)}catch(x){}}
+function draftRestore(){try{
+  const f=document.querySelector('#panel form[data-form]');if(!f)return;const o=JSON.parse(localStorage.getItem(DRAFT)||'null');
+  if(!o||o.n!==f.dataset.form||o.i!==(f.dataset.id||'')||Date.now()-o.t>1800000)return;let n=0;
+  f.querySelectorAll('input,select,textarea').forEach(e=>{if(!e.name||e.type==='file'||e.type==='password'||!(e.name in o.v))return;const v=o.v[e.name];
+    if(e.type==='checkbox'||e.type==='radio'){e.checked=v.indexOf(e.value)>=0}else{e.value=v}n++;if(e.tagName==='SELECT')e.dispatchEvent(new Event('change',{bubbles:true}))});
+  if(n){const h=document.createElement('div');h.className='hint';h.textContent='Se recuperó lo que estaba escribiendo. Las fotos hay que tomarlas otra vez.';f.insertBefore(h,f.firstChild)}
+}catch(x){}}
+{const _os=openSheet;openSheet=function(html,fn){_os(html,fn);draftRestore()}}
+{const _cl=ACTS.close;ACTS.close=function(){draftClear();return _cl.apply(this,arguments)}}
+document.addEventListener('input',e=>{const f=e.target.closest&&e.target.closest('#panel form[data-form]');if(f)draftSave(f)});
+document.addEventListener('change',e=>{const f=e.target.closest&&e.target.closest('#panel form[data-form]');if(f&&e.target.type!=='file')draftSave(f)});
 document.addEventListener('submit',e=>{
   const f=e.target;if(!f||!f.dataset||!f.dataset.form)return;
   e.preventDefault();
   const h=FORMS[f.dataset.form];if(!h)return;
   const b=f.querySelector('[type=submit]');if(b)b.disabled=true;
-  (async()=>{try{await h(Object.fromEntries(new FormData(f)),f)}catch(err){showErr(err)}finally{if(b&&b.isConnected)b.disabled=false}})();
+  (async()=>{try{await h(Object.fromEntries(new FormData(f)),f);draftClear()}catch(err){showErr(err)}finally{if(b&&b.isConnected)b.disabled=false}})();
 });
 document.addEventListener('change',e=>{if(e.target.id==='f-file')subirFoto(e.target)});
 document.addEventListener('input',e=>{if(e.target.id==='q'){S.q=e.target.value;const l=$('#glist');if(l)l.innerHTML=animalRows()}});
@@ -1207,7 +1216,7 @@ function parcelaSheet(id){
   const dias=[0,1,2,3,4,5,6].map(n=>addDays(td,n));
   const agenda=dias.map(d=>{const l=ts.filter(t=>t.estado!=='completado'&&tCubre(t,d));return l.length?`<div class="item" style="align-items:flex-start"><div class="item-main"><div class="t">${wdOf(d)} ${fdate(d)}${d===td?' · hoy':''}</div>${l.map(t=>`<div class="sub"><b>${esc(t.titulo)}</b> · ${esc(tnames(t))}</div>`).join('')}</div></div>`:''}).join('');
   const hechas=ts.filter(t=>t.estado==='completado').sort((a,b)=>String(tFin(b)).localeCompare(String(tFin(a)))).slice(0,6);
-  openSheet(sheetTop(esc(p.nombre))+`<div style="margin-bottom:10px">${avatar('Parcelas',p.id,(p.nombre||'?').slice(0,2),'big')}</div><dl class="kv"><dt>Uso</dt><dd>${esc(usoL[p.uso]||'Otro')}</dd><dt>Tamaño</dt><dd>${p.area!==''&&p.area!=null?esc(p.area)+' '+esc({mz:'manzanas',ha:'hectáreas',m2:'m²'}[p.unidad]||''):'—'}</dd><dt>Qué hay</dt><dd>${esc(p.descripcion||'—')}</dd>${p.notas?`<dt>Notas</dt><dd>${esc(p.notas)}</dd>`:''}${cult.length?`<dt>Cultivos</dt><dd>${cult.map(c=>esc(c.nombre)).join(', ')}</dd>`:''}</dl>
+  openSheet(sheetTop(esc(p.nombre))+`<div style="margin-bottom:10px;display:flex;gap:12px;align-items:center">${avatar('Parcelas',p.id,(p.nombre||'?').slice(0,2),'big')}<div>${perfilBtn('Parcelas',p.id)}</div></div><dl class="kv"><dt>Uso</dt><dd>${esc(usoL[p.uso]||'Otro')}</dd><dt>Tamaño</dt><dd>${p.area!==''&&p.area!=null?esc(p.area)+' '+esc({mz:'manzanas',ha:'hectáreas',m2:'m²'}[p.unidad]||''):'—'}</dd><dt>Qué hay</dt><dd>${esc(p.descripcion||'—')}</dd>${p.notas?`<dt>Notas</dt><dd>${esc(p.notas)}</dd>`:''}${cult.length?`<dt>Cultivos</dt><dd>${cult.map(c=>esc(c.nombre)).join(', ')}</dd>`:''}</dl>
   <div class="toolbar" style="margin-top:10px"><button class="btn sm" data-act="newTask" data-parcela="${esc(p.nombre)}">Programar actividad</button><button class="btn sm alt" data-act="editParcela" data-id="${esc(p.id)}">Editar perfil</button></div>
   <div class="lbl" style="margin:12px 0 6px">Actividades de los próximos 7 días</div><div class="list">${agenda||'<div class="item muted">No hay actividades programadas.</div>'}</div>
   <div class="lbl" style="margin:12px 0 6px">Hechas recientemente</div><div class="list">${hechas.map(t=>`<div class="item"><div class="item-main"><div class="t" style="font-weight:600">${esc(t.titulo)}</div><div class="sub">${fdate(t.inicio||t.fecha)}${tFin(t)&&tFin(t)!==(t.inicio||t.fecha)?' al '+fdate(tFin(t)):''} · ${esc(tnames(t))}${t.completadoPor?' · terminó '+esc(t.completadoPor):''}</div></div></div>`).join('')||'<div class="item muted">Nada todavía.</div>'}</div>
@@ -1514,7 +1523,9 @@ const parcelaFields=p=>`<div class="field"><label for="f-pn">Nombre de la parcel
 
 document.addEventListener('change',e=>{
   const t=e.target;if(!t||!t.dataset)return;
-  if(t.dataset.foto!==undefined){const sl=t.closest('.fslot');if(sl){sl.querySelectorAll('input[data-foto]').forEach(o=>{if(o!==t)o.value=''});const pv=sl.querySelector('[data-prev]');if(pv)pv.textContent=t.files[0]?'Foto lista: '+t.files[0].name:''}}
+  if(t.dataset.foto!==undefined){const sl=t.closest('.fslot');if(sl){const pv=sl.querySelector('[data-prev]'),fl=t.files&&t.files[0];sl._d=null;sl._p=null;if(!fl){if(pv)pv.textContent='';return}
+    if(pv)pv.textContent='Preparando foto…';
+    sl._p=reducirFoto(fl).then(d=>{sl._d=d;if(pv)pv.innerHTML=`<img alt="Vista previa" src="${d}" style="max-width:100%;max-height:120px;border-radius:6px;display:block">`}).catch(err=>{if(pv)pv.textContent=(err&&err.mensaje)||'No se pudo leer la foto.'}).finally(()=>{sl.querySelectorAll('input[data-foto]').forEach(o=>{o.value=''})})}return}
   const f=t.closest&&t.closest('form[data-form="newAnimal"]');if(f&&/^(madreId|padreId|sexo|tipo)$/.test(t.name))refreshSugs(f);
 });
 document.addEventListener('input',e=>{const f=e.target.closest&&e.target.closest('form[data-form="newAnimal"]');if(f&&/^(madreTexto|padreTexto)$/.test(e.target.name))refreshSugs(f)});
@@ -1529,13 +1540,14 @@ function fotoField(id,max,titulo){
   for(let i=1;i<=max;i++)h+=`<div class="fslot"><div class="sub"><b>${esc(titulo||('Foto '+i+(i===2?' (otro ángulo)':'')))}</b></div><div class="fprev" data-prev></div><div class="toolbar" style="margin:6px 0 0"><label class="btn alt sm" for="${id}-c${i}">Tomar foto</label><label class="btn alt sm" for="${id}-g${i}">Elegir de la galería</label></div><input id="${id}-c${i}" type="file" accept="image/*" capture="environment" data-foto hidden><input id="${id}-g${i}" type="file" accept="image/*" data-foto hidden></div>`;
   return `<div class="field fotos-f"><label>Fotos (opcional, hasta ${max})</label>${h}</div>`;
 }
-async function leerFotos(f){const out=[];for(const s of f.querySelectorAll('.fslot')){const i=[...s.querySelectorAll('input[data-foto]')].find(x=>x.files&&x.files[0]);if(i)out.push(await reducirFoto(i.files[0]))}return out}
+async function leerFotos(f){const out=[];for(const s of f.querySelectorAll('.fslot')){if(s._p)await s._p;if(s._d)out.push(s._d)}return out}
 async function subirFotosA(modulo,refId,fotos,desc){const out=[];for(const d of fotos){const r=await api('fotoSubir',{modulo,refId,descripcion:desc||'',datos:d});upsert('Fotos',r.fila);S.fc[r.fila.id]=d;out.push(r.fila)}return out}
 async function subirPerfil(f,modulo,refId){
   const fs=await leerFotos(f);if(!fs.length)return;
   const [x]=await subirFotosA(modulo,refId,fs.slice(0,1),'Foto de perfil');
   const r=await api('fotoPerfil',{id:x.id});T('Fotos').forEach(q=>{if(q.modulo===modulo&&q.refId===refId)q.perfil=false});upsert('Fotos',r.fila);
 }
+const perfilBtn=(m,id)=>PERFIL_PUEDE[m]&&PERFIL_PUEDE[m]()?`<button class="btn sm alt" type="button" data-act="perfilNueva" data-m="${m}" data-r="${esc(id)}" style="margin-top:6px">${perfilDe(m,id)?'Cambiar foto de perfil':'Poner foto de perfil'}</button>`:'';
 const perfilDe=(m,id)=>T('Fotos').find(f=>f.modulo===m&&f.refId===id&&f.perfil===true);
 const avatar=(m,id,txt,cls)=>{const p=perfilDe(m,id);return p?`<div class="avatar pf ${cls||''}">${fimg(p.id)}</div>`:`<div class="avatar ${cls||''}">${esc(txt)}</div>`};
 const PERFIL_PUEDE={Animales:()=>['admin','capataz','mandador','veterinario'].includes(S.user.rol),Parcelas:()=>canOps(),Vehiculos:()=>canOps()||S.user.rol==='mecanico',Equipos:()=>canOps()||S.user.rol==='mecanico'};
@@ -1660,7 +1672,7 @@ const specRow=(k,v)=>v!==''&&v!=null?`<dt>${k}</dt><dd>${esc(v)}</dd>`:'';
 function entSheet(m,id){
   const e=T(m).find(x=>x.id===id);if(!e){closeSheet();return}
   const veh=m==='Vehiculos';
-  openSheet(sheetTop(esc(e.nombre))+`<div style="display:flex;gap:12px;align-items:center;margin-bottom:10px">${avatar(m,e.id,(e.nombre||'?').slice(0,2),'big')}<div>${pill(e.estado||'Operativo',e.estado==='Operativo'?'ok':'bad')}<div class="sub muted">${esc(e.tipo||'')}${e.placa?' · placa '+esc(e.placa):''}</div></div></div>
+  openSheet(sheetTop(esc(e.nombre))+`<div style="display:flex;gap:12px;align-items:center;margin-bottom:10px">${avatar(m,e.id,(e.nombre||'?').slice(0,2),'big')}<div>${pill(e.estado||'Operativo',e.estado==='Operativo'?'ok':'bad')}<div class="sub muted">${esc(e.tipo||'')}${e.placa?' · placa '+esc(e.placa):''}</div>${perfilBtn(m,e.id)}</div></div>
   <dl class="kv">${specRow('Marca',e.marca)}${specRow('Modelo',e.modelo)}${specRow('Año',e.anio)}${veh?specRow('Combustible',e.combustible)+specRow('Capacidad',e.capacidad):specRow('Serie',e.serie)+specRow('Ubicación',e.ubicacion)}${specRow('Próxima revisión',e.proximaRevision?fdatey(e.proximaRevision):'')}</dl>
   ${e.especificaciones?`<div class="note" style="margin-top:10px;background:var(--surface-2);border-radius:6px;padding:8px">${esc(e.especificaciones)}</div>`:''}${e.nota?`<div class="sub" style="margin-top:6px">${esc(e.nota)}</div>`:''}
   ${mngEnt()?`<div class="toolbar" style="margin-top:10px"><button class="btn sm alt" data-act="${veh?'editVeh':'editEquipo'}" data-id="${esc(e.id)}">Editar datos y especificaciones</button></div>`:''}
@@ -1730,9 +1742,10 @@ Object.assign(FORMS,{
     if(fotos.length){const r=await api('comentarioCrear',{modulo:trId?'Tratamientos':'General',refId:trId,texto:'Emergencia: '+d.paso,fotos});upsert('Comentarios',r.fila);(r.fotos||[]).forEach((x,i)=>{upsert('Fotos',x);S.fc[x.id]=fotos[i]})}
     closeSheet();render();toast('Emergencia registrada');
   },
+  async perfilNueva(d,f){const fs=await leerFotos(f);if(!fs.length)throw {mensaje:'Tome o elija una foto.'};await subirPerfil(f,f.dataset.m,f.dataset.r);toast('Foto de perfil guardada');refreshSheet()},
   async fotosAdd(d,f){
     const fotos=await leerFotos(f);if(!fotos.length)throw {mensaje:'Tome o elija al menos una foto.'};
-    await subirFotosA(f.dataset.m,f.dataset.r,fotos,d.desc||'');toast('Fotos guardadas');refreshSheet();
+    const sub=await subirFotosA(f.dataset.m,f.dataset.r,fotos,d.desc||'');if(d.usarPerfil&&sub[0]){const r=await api('fotoPerfil',{id:sub[0].id});T('Fotos').forEach(q=>{if(q.modulo===f.dataset.m&&q.refId===f.dataset.r)q.perfil=false});upsert('Fotos',r.fila)}toast('Fotos guardadas');refreshSheet();
   },
   async veh(d,f){
     const dt=vehPayload(d);let id=f.dataset.id;
@@ -1782,7 +1795,8 @@ Object.assign(FORMS,{
 Object.assign(ACTS,{
   entSheet:el=>entSheet(el.dataset.m,el.dataset.id),
   fperfil:el=>act(async()=>{const r=await api('fotoPerfil',{id:el.dataset.id});T('Fotos').forEach(q=>{if(q.modulo===r.fila.modulo&&q.refId===r.fila.refId)q.perfil=false});upsert('Fotos',r.fila);const fn=S.sheetFn;render();if(fn)fn();toast('Foto de perfil actualizada')}),
-  addFotos:el=>openSheet(sheetTop('Agregar fotos')+`<form data-form="fotosAdd" data-m="${el.dataset.m}" data-r="${esc(el.dataset.r)}">${fotoField('f-af')}<div class="field"><label for="f-afd">Descripción (opcional)</label><input id="f-afd" name="desc" maxlength="100"></div><button class="btn" type="submit">Guardar fotos</button></form>`),
+  perfilNueva:el=>openSheet(formWrap('Foto de perfil','perfilNueva',fotoField('f-pn',1,'Foto de perfil'),'','Guardar foto de perfil').replace('<form data-form="perfilNueva" >','<form data-form="perfilNueva" data-m="'+el.dataset.m+'" data-r="'+esc(el.dataset.r)+'">')),
+  addFotos:el=>openSheet(sheetTop('Agregar fotos')+`<form data-form="fotosAdd" data-m="${el.dataset.m}" data-r="${esc(el.dataset.r)}">${fotoField('f-af')}<div class="field"><label for="f-afd">Descripción (opcional)</label><input id="f-afd" name="desc" maxlength="100"></div>${PERFIL_PUEDE[el.dataset.m]&&PERFIL_PUEDE[el.dataset.m]()?'<div class="checks" style="margin-bottom:12px"><label for="f-afp"><input id="f-afp" type="checkbox" name="usarPerfil">Usar la primera foto como foto de perfil</label></div>':''}<button class="btn" type="submit">Guardar fotos</button></form>`),
   newVeh:()=>openSheet(formWrap('Nuevo vehículo','veh',vehFields(null))),
   editVeh:el=>{const v=T('Vehiculos').find(x=>x.id===el.dataset.id);openSheet(formWrap('Vehículo: '+esc(v.nombre),'veh',vehFields(v),v.id))},
   newEquipo:()=>openSheet(formWrap('Nuevo equipo','newEquipo',equipoFields(null))),
