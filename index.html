@@ -123,6 +123,9 @@ th.sat{color:var(--gold-ink)}
 .cell{min-width:52px;min-height:44px;border:2px solid var(--line);background:var(--surface-2);border-radius:8px;padding:6px 4px;font-weight:700;font-size:13px}
 .cell.M,.cell.T{background:var(--warn-soft);color:var(--warn);border-color:transparent}
 .cell.D{background:var(--ok-soft);color:var(--ok);border-color:transparent}
+.cam{position:fixed;inset:0;z-index:3000;background:#000;display:flex;flex-direction:column}.cam video{flex:1;min-height:0;width:100%;object-fit:contain;background:#000}.cam-bar{display:flex;gap:8px;justify-content:space-around;padding:12px;background:#111}.cam-msg{color:#fff;padding:8px 12px;text-align:center;min-height:22px;background:#111}.cam-flash{position:absolute;inset:0;background:#fff;opacity:.7;pointer-events:none}
+.fth{display:flex;flex-direction:column;gap:4px;width:84px}.fth img{width:84px;height:84px;object-fit:cover;border-radius:6px}
+.lb{position:fixed;inset:0;z-index:2500;background:#000;display:flex;flex-direction:column;color:#fff}.lb-top{display:flex;gap:8px;justify-content:space-between;align-items:center;padding:10px 12px;background:#111;flex-wrap:wrap}.lb-zoom{display:flex;gap:6px}.lb-stage{flex:1;min-height:0;overflow:hidden;display:flex;align-items:center;justify-content:center;touch-action:none;user-select:none;-webkit-user-select:none}.lb-stage img{max-width:100%;max-height:100%;object-fit:contain;transform-origin:center center;touch-action:none;-webkit-user-drag:none;will-change:transform}.lb-cap{padding:8px 12px;text-align:center;font-size:14px;background:#111}
 .avatar.pf{padding:0;overflow:hidden}.avatar.pf img{width:100%;height:100%;object-fit:cover}.avatar.big{width:88px;height:88px;font-size:22px}.frow{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}.fslot{margin:0 0 12px;padding:8px;border:2px dashed var(--line);border-radius:8px}.fprev{font-size:13px;color:var(--muted);min-height:16px}
 .avatar{width:42px;height:42px;border-radius:8px;display:grid;place-items:center;font-family:var(--display);font-weight:700;background:var(--gold-soft);color:var(--gold-ink);flex:none}
 .kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0}
@@ -314,7 +317,7 @@ async function salir(){
 const animals=()=>T('Animales').filter(a=>a.activo!==false);
 const gname=id=>{const g=T('Grupos').find(x=>x.id===id);return g?g.nombre:'Sin grupo'};
 const grpOrd=()=>T('Grupos').find(g=>/orde/i.test(g.nombre));
-const grpSec=()=>T('Grupos').find(g=>/seca/i.test(g.nombre));
+const grpSec=()=>T('Grupos').find(g=>/seca|orro|horr/i.test(g.nombre));
 const isOrd=a=>{const g=grpOrd();return !!g&&a.grupoId===g.id};
 const workers=()=>T('Personal').filter(p=>p.activo!==false).sort((a,b)=>a.nombre.localeCompare(b.nombre));
 function wname(id){
@@ -362,10 +365,12 @@ function alertsFor(){
   const add=(mod,level,text)=>out.push({mod,level,text});
   if(ops)animals().forEach(a=>{const o=ordInfo(a);if(o&&o.cls!=='ok')add('ordeno',o.cls,`${a.nombre} (#${a.numero}): ${lc(o.txt)}, fecha ${fdate(a.ordenoHasta)}.`)});
   if(ops||vt)animals().forEach(a=>{
-    const c=cambioGrupo(a);if(ops&&c&&c.dias<=15)add('ganado',c.dias<=0?'bad':'warn',`${a.nombre} (#${a.numero}) ${c.dias<=0?'ya toca pasar':'pasa en '+c.dias+' días'} de ${c.de.nombre} a ${c.a.nombre}.`);
+    const c=cambioGrupo(a);if(ops&&c&&c.dias<=15)add('ganado',c.dias<=0?'bad':'warn',c.revisar?`${a.nombre} (#${a.numero}): ${c.dias<=0?'ya toca':'en '+c.dias+' días toca'} revisar si está desarrollado para pasar con ${c.a.nombre}.`:`${a.nombre} (#${a.numero}) ${c.dias<=0?'ya toca pasar':'pasa en '+c.dias+' días'} de ${c.de.nombre} a ${c.a.nombre}.`);
+    const sl=sinLeche(a);if(sl)add('ganado',sl.dias<=0?'bad':'warn',`${a.nombre} (#${a.numero}): ${sl.dias<=0?'ya cumplió 3 meses, ya no se le da leche':'cumple 3 meses el '+fdate(sl.due)+', después ya no se le da leche'}.`);
     const r=reproEstado(a);if(!r)return;
     if(r.k==='servida'&&r.revisar<=addDays(td,2)&&dayDiff(r.base,td)<=30)add('ganado','warn',`${a.nombre} (#${a.numero}): revisar si repitió celo (servida el ${fdate(r.base)}).`);
     if((r.k==='prenez'||r.k==='servida')&&r.dias<=15)add('ganado',r.dias<0?'bad':'warn',`${a.nombre} (#${a.numero}): parto probable ${r.dias<0?'pasó hace '+(-r.dias)+' días':r.dias===0?'hoy':'en '+r.dias+' días'}.`);
+    if(r.k==='parto'&&a.tipo==='Vaca'&&!isOrd(a)&&r.dEntra<=2&&r.dEntra>=-30)add('ganado',r.dEntra<=0?'bad':'warn',`${a.nombre} (#${a.numero}): ${r.dEntra<=0?'ya pasaron los 8 días del parto, toca pasarla al ordeño':'entra al ordeño el '+fdate(r.entra)+' (calostro)'}.`);
     if(r.k==='celo'&&dayDiff(r.fecha,td)<=2)add('ganado','warn',`${a.nombre} (#${a.numero}) está en celo (${fdate(r.fecha)}).`);
   });
   if(ops||vt){
@@ -406,7 +411,7 @@ V.mas=()=>`<div class="pagehead"><h1>Todos los módulos</h1></div><div class="gr
 V.ganado=()=>{
   const l=animals();
   const chips=[['todos','Todos',l.length],...T('Grupos').filter(g=>g.activo!==false).map(g=>[g.id,g.nombre,l.filter(a=>a.grupoId===g.id).length])];if(!isVet())chips.push(['baja','De baja',T('Animales').filter(a=>a.activo===false).length]);
-  return `<div class="pagehead"><div><h1>Ganado</h1><p>${l.length} animales registrados. Capacidad de referencia: 200.</p></div><div class="toolbar" style="margin:0">${isAdmin()?'<button class="btn alt sm" data-act="reglasEdad">Reglas por edad</button>':''}${isVet()?'':'<button class="btn" data-act="newAnimal">Nuevo animal</button>'}</div></div>
+  return `<div class="pagehead"><div><h1>Ganado</h1><p>${l.length} animales registrados. Capacidad de referencia: 200.</p></div><div class="toolbar" style="margin:0">${isAdmin()?'<button class="btn alt sm" data-act="reglasEdad">Grupos y edades</button>':''}${isVet()?'':'<button class="btn" data-act="newAnimal">Nuevo animal</button>'}</div></div>
   ${ganadoCards()}<div class="chips">${chips.map(c=>`<button class="${S.fg===c[0]?'on':''}" data-act="fg" data-k="${esc(c[0])}">${esc(c[1])} · ${c[2]}</button>`).join('')}</div>
   <div class="toolbar"><input class="input grow" id="q" type="search" placeholder="Buscar por nombre o número" value="${esc(S.q)}" aria-label="Buscar animal"></div>
   <div class="list" id="glist">${animalRows()}</div>`;
@@ -430,7 +435,7 @@ function animalSheet(id){
   openSheet(sheetTop(`${esc(a.nombre)} · #${esc(a.numero)}`)+`
   ${baja?`<div class="errbox">De baja el ${fdatey(a.bajaFecha)} · ${esc(a.bajaMotivo||'sin motivo')}${a.bajaNota?'. '+esc(a.bajaNota):''}${!vt?`<div style="margin-top:8px"><button class="btn sm alt" data-act="reactivar" data-id="${esc(a.id)}">Reactivar</button></div>`:''}</div>`:''}
   <div style="display:flex;gap:12px;align-items:center;margin-bottom:10px">${avatar('Animales',a.id,String(a.numero).slice(0,3),'big')}<div>${pill(baja?'De baja':'Activo',baja?'bad':'ok')}<div>${perfilBtn('Animales',a.id)}</div></div></div>
-  <dl class="kv"><dt>Tipo</dt><dd>${esc(a.tipo)}${a.sexo?' · '+(a.sexo==='H'?'Hembra':'Macho'):''}</dd><dt>Grupo</dt><dd>${esc(gname(a.grupoId))}</dd><dt>Ingreso o nacimiento</dt><dd>${fdatey(a.fechaIngreso)}</dd><dt>En este grupo desde</dt><dd>${fdatey(a.grupoDesde)}</dd><dt>Edad</dt><dd>${esc(edadTxt(a))}</dd>${a.nacimiento?`<dt>Nacimiento${a.nacEstimado?' (aprox.)':''}</dt><dd>${fdatey(a.nacimiento)}</dd>`:''}${(()=>{const c=cambioGrupo(a);return c?`<dt>Cambio de grupo</dt><dd>${c.dias<=0?'Ya toca':'En '+c.dias+' días'} → ${esc(c.a.nombre)} (${fdate(c.due)})</dd>`:''})()}${specRow('Raza',a.raza)}${specRow('Color',a.color)}${specRow('Peso',a.peso!==''&&a.peso!=null?a.peso+' kg':'')}${specRow('Fierro',a.fierro)}${crias.length?`<dt>Crías (${crias.length})</dt><dd style="display:flex;flex-wrap:wrap;gap:6px">${crias.map(c=>`<button class="btn sm alt" data-act="animal" data-id="${esc(c.id)}">${esc(c.nombre)} #${esc(c.numero)}</button>`).join('')}</dd>`:''}</dl>
+  <dl class="kv"><dt>Tipo</dt><dd>${esc(a.tipo)}${a.sexo?' · '+(a.sexo==='H'?'Hembra':'Macho'):''}</dd><dt>Grupo</dt><dd>${esc(gname(a.grupoId))}</dd><dt>Ingreso o nacimiento</dt><dd>${fdatey(a.fechaIngreso)}</dd><dt>En este grupo desde</dt><dd>${fdatey(a.grupoDesde)}</dd><dt>Edad</dt><dd>${esc(edadTxt(a))}</dd>${a.nacimiento?`<dt>Nacimiento${a.nacEstimado?' (aprox.)':''}</dt><dd>${fdatey(a.nacimiento)}</dd>`:''}${(()=>{const c=cambioGrupo(a);return c?`<dt>${c.revisar?'Revisar desarrollo':'Cambio de grupo'}</dt><dd>${c.dias<=0?'Ya toca':'En '+c.dias+' días'} → ${esc(c.a.nombre)} (${fdate(c.due)})</dd>`:''})()}${specRow('Raza',a.raza)}${specRow('Color',a.color)}${specRow('Peso',a.peso!==''&&a.peso!=null?a.peso+' kg':'')}${specRow('Fierro',a.fierro)}${crias.length?`<dt>Crías (${crias.length})</dt><dd style="display:flex;flex-wrap:wrap;gap:6px">${crias.map(c=>`<button class="btn sm alt" data-act="animal" data-id="${esc(c.id)}">${esc(c.nombre)} #${esc(c.numero)}</button>`).join('')}</dd>`:''}</dl>
   <div class="lbl" style="margin:14px 0 4px">Antecedentes</div>${genHtml(a)}
   ${a.observaciones?`<div class="note" style="margin-top:10px;background:var(--surface-2);border-radius:6px;padding:8px">${esc(a.observaciones)}</div>`:''}
   ${a.especificaciones?`<div class="note" style="margin-top:10px;background:var(--surface-2);border-radius:6px;padding:8px"><b>Especificaciones:</b> ${esc(a.especificaciones)}</div>`:''}
@@ -765,8 +770,8 @@ const FORMS={
     S.user.debeCambiar=false;await cargarTodo();S.view='inicio';render();toast('Clave guardada');
   },
   async newAnimal(d,f){
-    const a=await add('Animales',{...(d.sexo?{sexo:d.sexo}:{}),madreId:d.madreId||'',padreId:d.padreId||'',madreTexto:d.madreId?'':(d.madreTexto||''),padreTexto:d.padreId?'':(d.padreTexto||''),numero:d.numero,nombre:d.nombre||('Animal '+d.numero),tipo:d.tipo,grupoId:d.grupoId,fechaIngreso:d.fechaIngreso||'',grupoDesde:today(),ordenoDesde:d.ordenoDesde||'',ordenoHasta:d.ordenoHasta||'',observaciones:d.observaciones||'',...extraAnimal(d),activo:true});
-    await hist(a.id,'Registrado en el sistema');await subirPerfil(f,'Animales',a.id);closeSheet();render();toast('Animal registrado');
+    const a=await add('Animales',{...(d.sexo?{sexo:d.sexo}:{}),madreId:d.madreId||'',padreId:d.padreId||'',madreTexto:d.madreId?'':(d.madreTexto||''),padreTexto:d.padreId?'':(d.padreTexto||''),numero:d.numero,nombre:d.nombre||'',tipo:d.tipo,grupoId:d.grupoId,fechaIngreso:d.fechaIngreso||'',grupoDesde:today(),ordenoDesde:d.ordenoDesde||'',ordenoHasta:d.ordenoHasta||'',observaciones:d.observaciones||'',...extraAnimal(d),activo:true});
+    if(!a.nombre||a.nombre==='')await upd('Animales',a.id,{nombre:'Animal '+a.numero});await hist(a.id,'Registrado en el sistema');await subirPerfil(f,'Animales',a.id);closeSheet();render();toast('Animal registrado con el número '+a.numero);
   },
   async editAnimal(d,f){const a0=T('Animales').find(x=>x.id===f.dataset.id),ex=extraAnimal(d);if(a0&&ex.nacimiento===a0.nacimiento)delete ex.nacEstimado;
     await upd('Animales',f.dataset.id,{...(d.sexo?{sexo:d.sexo}:{}),numero:d.numero,nombre:d.nombre,tipo:d.tipo,fechaIngreso:d.fechaIngreso||'',observaciones:d.observaciones||'',madreId:d.madreId||'',padreId:d.padreId||'',madreTexto:d.madreId?'':(d.madreTexto||''),padreTexto:d.padreId?'':(d.padreTexto||''),...ex});await subirPerfil(f,'Animales',f.dataset.id);render();animalSheet(f.dataset.id);toast('Datos guardados')},
@@ -895,7 +900,7 @@ const ACTS={
   animal:el=>animalSheet(el.dataset.id),
   foto:el=>act(async()=>{const f=T('Fotos').find(x=>x.id===el.dataset.id);if(!f)return;const src=await getFoto(f.id);openSheet(sheetTop('Foto')+`<img class="fotoG" src="${src}" alt="Foto del animal"><p class="sub" style="margin:8px 0">${fdate(f.fecha)} · ${esc(f.autor||'')}${f.descripcion?' · '+esc(f.descripcion):''}</p><button class="btn alt" data-act="animal" data-id="${esc(f.refId)}">Volver a la ficha</button>`)}),
   newAnimal:()=>openSheet(formWrap('Nuevo animal','newAnimal',`
-    <div class="row2"><div class="field"><label for="f-n">Número</label><input id="f-n" name="numero" required maxlength="20"></div><div class="field"><label for="f-name">Nombre</label><input id="f-name" name="nombre" maxlength="60"></div></div>
+    <div class="row2"><div class="field"><label for="f-n">Número</label><input id="f-n" name="numero" maxlength="20" placeholder="Automático"><small>Déjelo vacío y se asigna el siguiente.</small></div><div class="field"><label for="f-name">Nombre</label><input id="f-name" name="nombre" maxlength="60"></div></div>
     <div class="row2"><div class="field"><label for="f-type">Tipo</label><select id="f-type" name="tipo">${opts(['Vaca','Toro','Novillo','Ternero','Chivito','Cabra','Otro'].map(x=>[x,x]))}</select></div><div class="field"><label for="f-g">Grupo</label><select id="f-g" name="grupoId">${opts(T('Grupos').filter(g=>g.activo!==false).map(g=>[g.id,g.nombre]),S.fg!=='todos'?S.fg:(grpOrd()||{}).id)}</select></div></div>
     <div class="field"><label for="f-since">Fecha de ingreso al corral</label><input id="f-since" name="fechaIngreso" type="date"><small>Déjelo vacío si no se conoce.</small></div>
     <div class="row2"><div class="field"><label for="f-od">Ordeña desde</label><input id="f-od" name="ordenoDesde" type="date"></div><div class="field"><label for="f-oh">Pasa a reposo el</label><input id="f-oh" name="ordenoHasta" type="date"></div></div>
@@ -1079,10 +1084,22 @@ async function lazyFotos(){
   }finally{lazyOn=false}
 }
 function showLb(src,cap){
-  const d=document.createElement('div');d.id='lb';d.setAttribute('data-act','lbclose');
-  d.style.cssText='position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.93);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:12px;gap:10px';
-  d.innerHTML=`<img src="${src}" alt="Foto" style="max-width:100%;max-height:80vh;border-radius:8px"><div style="color:#fff;text-align:center">${esc(cap||'')}</div><button class="btn" type="button">Cerrar</button>`;
+  const d=document.createElement('div');d.id='lb';d.className='lb';d.setAttribute('role','dialog');d.setAttribute('aria-label','Foto ampliada');
+  d.innerHTML=`<div class="lb-top"><button class="btn" type="button" data-act="lbclose">← Volver</button><div class="lb-zoom"><button class="btn alt" type="button" data-act="lbz" data-d="-1" aria-label="Alejar">−</button><button class="btn alt" type="button" data-act="lbz" data-d="0" aria-label="Tamaño normal">100%</button><button class="btn alt" type="button" data-act="lbz" data-d="1" aria-label="Acercar">+</button></div></div><div class="lb-stage"><img src="${src}" alt="Foto" draggable="false"></div><div class="lb-cap">${esc(cap||'')}<br><span style="opacity:.75">Pellizque o toque dos veces para acercar. Arrastre para moverse.</span></div>`;
   document.body.appendChild(d);
+  const stage=d.querySelector('.lb-stage'),img=d.querySelector('img'),st={s:1,x:0,y:0},P=new Map();let d0=0,s0=1,tap=0,tx=0,ty=0;
+  const lim=()=>{if(st.s<=1){st.x=st.y=0;return}const r=stage.getBoundingClientRect(),mx=Math.max(0,(img.offsetWidth*st.s-r.width)/2),my=Math.max(0,(img.offsetHeight*st.s-r.height)/2);st.x=Math.max(-mx,Math.min(mx,st.x));st.y=Math.max(-my,Math.min(my,st.y))};
+  const ap=()=>{lim();img.style.transform=`translate(${st.x}px,${st.y}px) scale(${st.s})`};
+  const setS=n=>{st.s=Math.max(1,Math.min(6,n));ap()};
+  d._zoom=k=>{if(k===0){st.x=st.y=0;setS(1)}else setS(st.s*(k>0?1.6:1/1.6))};
+  const dist=()=>{const a=[...P.values()];return Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y)||1};
+  stage.addEventListener('pointerdown',e=>{try{stage.setPointerCapture(e.pointerId)}catch(x){}P.set(e.pointerId,{x:e.clientX,y:e.clientY});if(P.size===2){d0=dist();s0=st.s}
+    else if(P.size===1){const t=Date.now();if(t-tap<320&&Math.hypot(e.clientX-tx,e.clientY-ty)<30){if(st.s>1){st.x=st.y=0;setS(1)}else setS(2.5);tap=0}else{tap=t;tx=e.clientX;ty=e.clientY}}});
+  stage.addEventListener('pointermove',e=>{const p=P.get(e.pointerId);if(!p)return;const dx=e.clientX-p.x,dy=e.clientY-p.y;p.x=e.clientX;p.y=e.clientY;
+    if(P.size===2){setS(s0*dist()/d0)}else if(st.s>1){st.x+=dx;st.y+=dy;ap()}});
+  const up=e=>{P.delete(e.pointerId);if(P.size===1){const a=[...P.values()][0];}};
+  stage.addEventListener('pointerup',up);stage.addEventListener('pointercancel',up);
+  stage.addEventListener('wheel',e=>{e.preventDefault();setS(st.s*(e.deltaY<0?1.2:1/1.2))},{passive:false});
 }
 
 /* Comentarios con foto (todos los roles) */
@@ -1523,9 +1540,8 @@ const parcelaFields=p=>`<div class="field"><label for="f-pn">Nombre de la parcel
 
 document.addEventListener('change',e=>{
   const t=e.target;if(!t||!t.dataset)return;
-  if(t.dataset.foto!==undefined){const sl=t.closest('.fslot');if(sl){const pv=sl.querySelector('[data-prev]'),fl=t.files&&t.files[0];sl._d=null;sl._p=null;if(!fl){if(pv)pv.textContent='';return}
-    if(pv)pv.textContent='Preparando foto…';
-    sl._p=reducirFoto(fl).then(d=>{sl._d=d;if(pv)pv.innerHTML=`<img alt="Vista previa" src="${d}" style="max-width:100%;max-height:120px;border-radius:6px;display:block">`}).catch(err=>{if(pv)pv.textContent=(err&&err.mensaje)||'No se pudo leer la foto.'}).finally(()=>{sl.querySelectorAll('input[data-foto]').forEach(o=>{o.value=''})})}return}
+  if(t.dataset.foto!==undefined){const w=t.closest('.fgal');if(w){const fls=[...(t.files||[])];t.value='';if(!fls.length)return;gMsg(w,'Preparando foto…');
+    w._p=(w._p||Promise.resolve()).then(async()=>{for(const fl of fls){try{if(!gAdd(w,await reducirFoto(fl)))break}catch(err){gMsg(w,(err&&err.mensaje)||'No se pudo leer la foto.')}}}).catch(()=>{})}return}
   const f=t.closest&&t.closest('form[data-form="newAnimal"]');if(f&&/^(madreId|padreId|sexo|tipo)$/.test(t.name))refreshSugs(f);
 });
 document.addEventListener('input',e=>{const f=e.target.closest&&e.target.closest('form[data-form="newAnimal"]');if(f&&/^(madreTexto|padreTexto)$/.test(e.target.name))refreshSugs(f)});
@@ -1535,13 +1551,39 @@ document.addEventListener('input',e=>{const f=e.target.closest&&e.target.closest
 /* ───────── Versión 3.1: cámara, perfiles, especificaciones, edad por grupo, reproducción, vacas ordeñadas y compras ───────── */
 const maxFotos=()=>['admin','veterinario','mecanico'].includes(S.user.rol)?3:2;
 const addMonths=(s,n)=>{const d=new Date(s+'T12:00:00Z');d.setUTCMonth(d.getUTCMonth()+n);return d.toISOString().slice(0,10)};
+const MAXG=40;
 function fotoField(id,max,titulo){
-  max=max||maxFotos();let h='';
-  for(let i=1;i<=max;i++)h+=`<div class="fslot"><div class="sub"><b>${esc(titulo||('Foto '+i+(i===2?' (otro ángulo)':'')))}</b></div><div class="fprev" data-prev></div><div class="toolbar" style="margin:6px 0 0"><label class="btn alt sm" for="${id}-c${i}">Tomar foto</label><label class="btn alt sm" for="${id}-g${i}">Elegir de la galería</label></div><input id="${id}-c${i}" type="file" accept="image/*" capture="environment" data-foto hidden><input id="${id}-g${i}" type="file" accept="image/*" data-foto hidden></div>`;
-  return `<div class="field fotos-f"><label>Fotos (opcional, hasta ${max})</label>${h}</div>`;
+  max=max||maxFotos();const uno=max===1;
+  return `<div class="field fotos-f"><label>${esc(titulo||'Fotos')} (opcional${uno?'':', hasta '+max})</label><div class="fgal" id="${id}" data-max="${max}"><div class="frow" data-thumbs></div><div class="sub" data-msg style="min-height:18px"></div><div class="toolbar" style="margin:6px 0 0"><button class="btn alt sm" type="button" data-act="camara" data-w="${id}">Tomar foto</button><label class="btn alt sm" for="${id}-g1">Elegir de la galería</label></div><input id="${id}-g1" type="file" accept="image/*" ${uno?'':'multiple'} data-foto hidden><input id="${id}-c1" type="file" accept="image/*" capture="environment" data-foto hidden></div></div>`;
 }
-async function leerFotos(f){const out=[];for(const s of f.querySelectorAll('.fslot')){if(s._p)await s._p;if(s._d)out.push(s._d)}return out}
-async function subirFotosA(modulo,refId,fotos,desc){const out=[];for(const d of fotos){const r=await api('fotoSubir',{modulo,refId,descripcion:desc||'',datos:d});upsert('Fotos',r.fila);S.fc[r.fila.id]=d;out.push(r.fila)}return out}
+function gMsg(w,t){const m=w.querySelector('[data-msg]');if(m)m.textContent=t||''}
+function gDraw(w){const th=w.querySelector('[data-thumbs]'),l=w._f||[];th.innerHTML=l.map((d,i)=>`<div class="fth"><img alt="Foto ${i+1}" src="${d}"><button class="btn sm alt" type="button" data-act="fquitar" data-w="${w.id}" data-i="${i}">Quitar</button></div>`).join('');gMsg(w,l.length?l.length+' foto'+(l.length>1?'s':'')+' lista'+(l.length>1?'s':'')+' para guardar':'')}
+function gAdd(w,d){const max=+w.dataset.max;w._f=w._f||[];if(max===1){w._f=[d];gDraw(w);return true}if(w._f.length>=max){gMsg(w,'Ya llegó al máximo de '+max+' fotos.');return false}w._f.push(d);gDraw(w);return true}
+async function leerFotos(f){const out=[];for(const w of f.querySelectorAll('.fgal')){if(w._p)await w._p;(w._f||[]).forEach(d=>out.push(d))}return out}
+/* Cámara dentro de la app: no sale de la aplicación, así que no se cierra por falta de memoria */
+let CAM=null;
+function camClose(){if(CAM){try{CAM.stream&&CAM.stream.getTracks().forEach(t=>t.stop())}catch(e){}CAM.el.remove();CAM=null}}
+async function camStart(){
+  const c=CAM;if(!c)return;try{if(c.stream)c.stream.getTracks().forEach(t=>t.stop())}catch(e){}
+  try{c.stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:c.face},width:{ideal:1280},height:{ideal:960}},audio:false});c.v.srcObject=c.stream;await c.v.play().catch(()=>{});c.el.querySelector('[data-cmsg]').textContent=''}
+  catch(e){c.el.querySelector('[data-cmsg]').innerHTML='No se pudo abrir la cámara. Permita el uso de la cámara en el navegador o <button class="btn sm" type="button" data-act="camNativa">use la cámara del teléfono</button>'}
+}
+function camOpen(w){
+  if(!w)return;
+  if(!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia)){const c=document.getElementById(w.id+'-c1');if(c)c.click();return}
+  camClose();const el=document.createElement('div');el.id='cam';el.className='cam';el.setAttribute('role','dialog');el.setAttribute('aria-label','Cámara');
+  el.innerHTML='<video playsinline muted autoplay></video><div class="cam-msg" data-cmsg aria-live="polite"></div><div class="cam-bar"><button class="btn alt" type="button" data-act="camCerrar">Listo</button><button class="btn" type="button" data-act="camFoto" aria-label="Tomar la foto">Tomar foto</button><button class="btn alt" type="button" data-act="camCambiar">Girar cámara</button></div>';
+  document.body.appendChild(el);CAM={el,w,face:'environment',stream:null,v:el.querySelector('video')};camStart();
+}
+function camShot(){
+  const c=CAM;if(!c||!c.stream||!c.v.videoWidth)return;
+  const k=Math.min(1,1024/Math.max(c.v.videoWidth,c.v.videoHeight)),cv=document.createElement('canvas');cv.width=Math.max(1,Math.round(c.v.videoWidth*k));cv.height=Math.max(1,Math.round(c.v.videoHeight*k));cv.getContext('2d').drawImage(c.v,0,0,cv.width,cv.height);
+  const d=cv.toDataURL('image/jpeg',0.7);cv.width=cv.height=0;const ok=gAdd(c.w,d),max=+c.w.dataset.max,n=(c.w._f||[]).length;
+  const fl=document.createElement('div');fl.className='cam-flash';c.el.appendChild(fl);setTimeout(()=>fl.remove(),120);
+  if(!ok||max===1||n>=max){camClose();return}
+  c.el.querySelector('[data-cmsg]').textContent='Foto '+n+' de '+max+' tomada. Toque “Listo” cuando termine.';
+}
+async function subirFotosA(modulo,refId,fotos,desc){const out=[];for(const d of fotos){if(fotos.length>1)toast('Subiendo foto '+(out.length+1)+' de '+fotos.length+'…');const r=await api('fotoSubir',{modulo,refId,descripcion:desc||'',datos:d});upsert('Fotos',r.fila);S.fc[r.fila.id]=d;out.push(r.fila)}return out}
 async function subirPerfil(f,modulo,refId){
   const fs=await leerFotos(f);if(!fs.length)return;
   const [x]=await subirFotosA(modulo,refId,fs.slice(0,1),'Foto de perfil');
@@ -1552,24 +1594,27 @@ const perfilDe=(m,id)=>T('Fotos').find(f=>f.modulo===m&&f.refId===id&&f.perfil==
 const avatar=(m,id,txt,cls)=>{const p=perfilDe(m,id);return p?`<div class="avatar pf ${cls||''}">${fimg(p.id)}</div>`:`<div class="avatar ${cls||''}">${esc(txt)}</div>`};
 const PERFIL_PUEDE={Animales:()=>['admin','capataz','mandador','veterinario'].includes(S.user.rol),Parcelas:()=>canOps(),Vehiculos:()=>canOps()||S.user.rol==='mecanico',Equipos:()=>canOps()||S.user.rol==='mecanico'};
 function galeriaHtml(m,id,titulo){
-  const ed=PERFIL_PUEDE[m]&&PERFIL_PUEDE[m]();
-  const fs=T('Fotos').filter(f=>f.modulo===m&&f.refId===id).sort((x,y)=>String(y.fecha).localeCompare(String(x.fecha)));
-  return `<div class="lbl" style="margin:14px 0 6px">${titulo||'Galería de fotos'} (${fs.length})</div>
-  <div class="fotos">${fs.map(f=>`<div><button class="foto" type="button" data-act="verfoto" data-id="${esc(f.id)}" aria-label="Ver foto">${fimg(f.id)}<span>${fdate(f.fecha)}${f.descripcion?' · '+esc(f.descripcion):''}</span></button>${f.perfil?`<div style="margin-top:4px">${pill('Foto de perfil','gold')}</div>`:(ed?`<button class="btn sm alt" style="margin-top:4px" data-act="fperfil" data-id="${esc(f.id)}">Hacer perfil</button>`:'')}</div>`).join('')||'<div class="item muted" style="grid-column:1/-1">Sin fotos todavía.</div>'}</div>
-  ${ed?`<button class="btn sm alt" style="margin-top:10px" data-act="addFotos" data-m="${m}" data-r="${esc(id)}">Agregar fotos</button>`:''}`;
+  const ed=PERFIL_PUEDE[m]&&PERFIL_PUEDE[m](),adm=isAdmin();
+  const all=T('Fotos').filter(f=>f.modulo===m&&f.refId===id).sort((x,y)=>String(y.fecha).localeCompare(String(x.fecha)));
+  const k='g'+m+id,lim=(S.galN&&S.galN[k])||12,fs=all.slice(0,lim);
+  return `<div class="lbl" style="margin:14px 0 6px">${titulo||'Galería de fotos'} (${all.length} de ${MAXG})</div>
+  <div class="fotos">${fs.map(f=>`<div><button class="foto" type="button" data-act="verfoto" data-id="${esc(f.id)}" aria-label="Ver foto">${fimg(f.id)}<span>${fdate(f.fecha)}${f.descripcion?' · '+esc(f.descripcion):''}</span></button>${f.perfil?`<div style="margin-top:4px">${pill('Foto de perfil','gold')}</div>`:(ed?`<button class="btn sm alt" style="margin-top:4px" data-act="fperfil" data-id="${esc(f.id)}">Hacer perfil</button>`:'')}${adm?`<button class="btn sm alt" style="margin-top:4px" data-act="fdel" data-id="${esc(f.id)}">Eliminar</button>`:''}</div>`).join('')||'<div class="item muted" style="grid-column:1/-1">Sin fotos todavía.</div>'}</div>
+  ${all.length>lim?`<button class="btn sm alt" style="margin-top:10px" data-act="galMas" data-k="${k}">Ver más fotos (${all.length-lim})</button>`:''}
+  ${ed?`<button class="btn sm alt" style="margin:10px 0 0 ${all.length>lim?'8px':'0'}" data-act="addFotos" data-m="${m}" data-r="${esc(id)}">Agregar fotos</button>`:''}`;
 }
 
 /* Edad y cambio de grupo */
 function mesesEdad(a){if(!a.nacimiento)return null;const x=new Date(a.nacimiento+'T12:00:00Z'),y=new Date(today()+'T12:00:00Z');let m=(y.getUTCFullYear()-x.getUTCFullYear())*12+y.getUTCMonth()-x.getUTCMonth();if(y.getUTCDate()<x.getUTCDate())m--;return Math.max(0,m)}
 function edadTxt(a){const m=mesesEdad(a);if(m==null)return 'No registrada';const y=Math.floor(m/12),r=m%12;const t=m<1?(dayDiff(a.nacimiento,today())+' días'):(y?`${y} año${y>1?'s':''}`:'')+(y&&r?' y ':'')+(r?`${r} mes${r>1?'es':''}`:'');return t+(a.nacEstimado?' (aprox.)':'')}
+const sinLeche=a=>{if(a.activo===false||a.tipo!=='Ternero'||!a.nacimiento)return null;const due=addMonths(a.nacimiento,3),dias=dayDiff(today(),due);return dias<=7&&dias>=-14?{due,dias}:null};
 function cambioGrupo(a){
   if(a.activo===false||!a.nacimiento)return null;
   const g=T('Grupos').find(x=>x.id===a.grupoId);if(!g||!g.mesesMax||!g.siguienteId)return null;
   const sg=T('Grupos').find(x=>x.id===g.siguienteId);if(!sg)return null;
-  const due=addMonths(a.nacimiento,Number(g.mesesMax));return {due,dias:dayDiff(today(),due),de:g,a:sg};
+  const due=addMonths(a.nacimiento,Number(g.mesesMax));return {due,dias:dayDiff(today(),due),de:g,a:sg,revisar:/reci|nacid/i.test(g.nombre)};
 }
 const extraAnimal=(d)=>{
-  const o={raza:d.raza||'',color:d.color||'',fierro:d.fierro||'',especificaciones:d.especificaciones||'',peso:d.peso===''||d.peso==null?'':Number(d.peso)};
+  const o={criasPrevias:d.criasPrevias===''||d.criasPrevias==null?'':Math.max(0,Math.round(Number(d.criasPrevias)||0)),raza:d.raza||'',color:d.color||'',fierro:d.fierro||'',especificaciones:d.especificaciones||'',peso:d.peso===''||d.peso==null?'':Number(d.peso)};
   if(d.nacimiento){o.nacimiento=d.nacimiento;o.nacEstimado=false}
   else if(d.edadMeses!==''&&d.edadMeses!=null&&isFinite(Number(d.edadMeses))){const m=Math.round(Number(d.edadMeses));if(m>=0){o.nacimiento=addMonths(d.fechaIngreso||today(),-m);o.nacEstimado=true}}
   return o;
@@ -1577,6 +1622,7 @@ const extraAnimal=(d)=>{
 const animalSpecFields=a=>`<div class="row2"><div class="field"><label for="f-nac">Fecha de nacimiento</label><input id="f-nac" name="nacimiento" type="date" max="${today()}" value="${esc(a&&a.nacimiento)}">${a&&a.nacEstimado?'<small>Esta fecha es aproximada.</small>':''}</div><div class="field"><label for="f-edm">Edad en meses</label><input id="f-edm" name="edadMeses" type="number" min="0" max="400" step="1" placeholder="Si llegó de afuera"><small>Si no se sabe la fecha de nacimiento, escriba la edad al llegar.</small></div></div>
   <div class="row2"><div class="field"><label for="f-raza">Raza</label><input id="f-raza" name="raza" maxlength="60" value="${esc(a&&a.raza)}"></div><div class="field"><label for="f-color">Color</label><input id="f-color" name="color" maxlength="60" value="${esc(a&&a.color)}"></div></div>
   <div class="row2"><div class="field"><label for="f-peso">Peso (kg)</label><input id="f-peso" name="peso" type="number" min="0" step="0.1" value="${a&&a.peso!==''&&a.peso!=null?a.peso:''}"></div><div class="field"><label for="f-fierro">Fierro o marca</label><input id="f-fierro" name="fierro" maxlength="60" value="${esc(a&&a.fierro)}"></div></div>
+  <div class="field"><label for="f-cp">Crías que ha tenido (solo hembras)</label><input id="f-cp" name="criasPrevias" type="number" min="0" max="30" step="1" value="${a&&a.criasPrevias!==''&&a.criasPrevias!=null?a.criasPrevias:''}"><small>Escriba cuántas ha tenido hasta hoy. Las que nazcan desde que se registre el parto se suman solas.</small></div>
   <div class="field"><label for="f-esp">Otras especificaciones</label><textarea id="f-esp" name="especificaciones" maxlength="500" placeholder="Cuernos, manchas, características…">${esc(a&&a.especificaciones)}</textarea></div>`;
 
 /* Reproducción */
@@ -1589,21 +1635,22 @@ function reproEstado(a){
   if(e.tipo==='prenez'){const base=e.base||e.fecha,parto=addDays(base,gestDias(a));return {k:'prenez',txt:'Preñada',cls:'ok',base,parto,dias:dayDiff(today(),parto)}}
   if(e.tipo==='celo'&&e.servida){const parto=addDays(e.fecha,gestDias(a));return {k:'servida',txt:'Servida, falta confirmar',cls:'warn',base:e.fecha,parto,dias:dayDiff(today(),parto),revisar:addDays(e.fecha,21)}}
   if(e.tipo==='celo')return {k:'celo',txt:'En celo',cls:'warn',fecha:e.fecha,proximo:addDays(e.fecha,21)};
-  if(e.tipo==='parto')return {k:'parto',txt:'Parida',cls:'n',fecha:e.fecha};
+  if(e.tipo==='parto')return {k:'parto',txt:'Parida',cls:'n',fecha:e.fecha,entra:addDays(e.fecha,8),dEntra:dayDiff(today(),addDays(e.fecha,8))};
   return {k:'aborto',txt:'Aborto',cls:'bad',fecha:e.fecha};
 }
 const criasDe=a=>T('Animales').filter(x=>x.madreId===a.id);
-function contCrias(a){const p=reprosDe(a).filter(r=>r.tipo==='parto');return p.length+criasDe(a).filter(c=>!p.some(x=>x.criaId===c.id)).length}
+function contCrias(a){const p=reprosDe(a).filter(r=>r.tipo==='parto');return (Number(a.criasPrevias)||0)+p.length+criasDe(a).filter(c=>!p.some(x=>x.criaId===c.id)).length}
 const animalName=id=>{const a=T('Animales').find(x=>x.id===id);return a?a.nombre+' #'+a.numero:''};
 function reproCard(a){
   if(!esHembraRep(a)||a.activo===false)return '';
   const r=reproEstado(a),l=reprosDe(a).slice().reverse();
   return `<div class="lbl" style="margin:14px 0 6px">Reproducción</div><div class="card" style="padding:10px 12px">
-  <div>${r?pill(r.txt,r.cls):pill('Sin registros','n')} <b>Crías: ${contCrias(a)}</b></div>
+  <div>${r?pill(r.txt,r.cls):pill('Sin registros','n')} <b>Crías: ${contCrias(a)}</b>${Number(a.criasPrevias)>0?` <span class="sub">(${a.criasPrevias} antes de registrarla)</span>`:''}</div>
   ${r&&r.parto?`<div class="sub">Parto probable: <b>${fdatey(r.parto)}</b>${r.dias>=0?` (en ${r.dias} día${r.dias===1?'':'s'})`:` (ya pasó hace ${-r.dias} días)`}</div>`:''}
   ${r&&r.k==='servida'?`<div class="sub">Si no vuelve a mostrar celo entre el ${fdate(addDays(r.base,18))} y el ${fdate(addDays(r.base,24))}, probablemente quedó preñada. Revisar el ${fdate(r.revisar)}.</div>`:''}
   ${r&&r.k==='celo'?`<div class="sub">Si no se sirve, el próximo celo sería alrededor del ${fdate(r.proximo)}.</div>`:''}
-  ${a.tipo==='Vaca'&&a.ordenoHasta&&r&&(r.k==='prenez'||r.k==='servida')?`<div class="sub">Sale del ordeño el <b>${fdatey(a.ordenoHasta)}</b> (a los 7 meses).</div>`:''}
+  ${a.tipo==='Vaca'&&a.ordenoHasta&&r&&['prenez','servida','celo'].includes(r.k)?`<div class="sub">Sale del ordeño el <b>${fdatey(a.ordenoHasta)}</b> (7 meses después del celo).</div>`:''}
+  ${r&&r.k==='parto'&&a.tipo==='Vaca'?(isOrd(a)?`<div class="sub">Ya está en ordeño. Los 7 meses se cuentan desde el próximo celo.</div>`:`<div class="sub">Recién parida: entra al ordeño a los 8 días del parto (mientras se quita el calostro), el <b>${fdatey(r.entra)}</b>${r.dEntra>0?` (en ${r.dEntra} día${r.dEntra===1?'':'s'})`:' (ya pasaron los 8 días)'}.</div>${canOps()&&r.dEntra<=0?`<button class="btn sm" style="margin-top:6px" data-act="pasarOrdeno" data-id="${esc(a.id)}">Pasar al ordeño</button>`:''}`):''}
   <button class="btn sm" style="margin-top:8px" data-act="newRepro" data-id="${esc(a.id)}">Registrar celo, preñez o parto</button>
   ${l.length?`<div class="list" style="margin-top:10px">${l.map(e=>`<div class="item"><div class="item-main"><div class="t" style="font-weight:600">${REPRO_L[e.tipo]}${e.servida?' con servicio':''} · ${fdate(e.fecha)}</div><div class="sub">${e.tipo==='prenez'&&e.base?'Servida el '+fdate(e.base)+' · ':''}${e.toro?'Toro: '+esc(e.toro)+' · ':''}${e.criaId?'Cría: '+esc(animalName(e.criaId))+' · ':''}${esc(e.nota||'')} ${esc(e.autor||'')}</div></div><button class="btn sm alt" data-act="reproAnular" data-id="${esc(e.id)}">Anular</button></div>`).join('')}</div>`:''}</div>`;
 }
@@ -1611,7 +1658,11 @@ async function recargarAnimales(){const r=await api('cargar',{tablas:['Animales'
 function ganadoCards(){
   const ops=canOps(),out=[];
   const cg=animals().map(a=>({a,c:cambioGrupo(a)})).filter(x=>x.c&&x.c.dias<=30).sort((x,y)=>x.c.dias-y.c.dias);
-  if(cg.length)out.push(`<div style="margin-bottom:14px"><h2 style="margin:0 0 8px">Cambios de grupo por edad</h2><div class="list">${cg.map(({a,c})=>`<div class="item"><div class="item-main"><div class="t">${esc(a.nombre)} #${esc(a.numero)} ${pill(c.dias<=0?'Ya toca':'En '+c.dias+' días',c.dias<=0?'bad':'warn')}</div><div class="sub">${esc(edadTxt(a))} · pasa de ${esc(c.de.nombre)} a ${esc(c.a.nombre)} (${fdate(c.due)})</div></div>${ops?`<button class="btn sm" data-act="pasarGrupo" data-id="${esc(a.id)}">Pasar a ${esc(c.a.nombre)}</button>`:''}</div>`).join('')}</div></div>`);
+  if(cg.length)out.push(`<div style="margin-bottom:14px"><h2 style="margin:0 0 8px">Cambios de grupo por edad</h2><div class="list">${cg.map(({a,c})=>`<div class="item"><div class="item-main"><div class="t">${esc(a.nombre)} #${esc(a.numero)} ${pill(c.dias<=0?'Ya toca':'En '+c.dias+' días',c.dias<=0?'bad':'warn')}</div><div class="sub">${esc(edadTxt(a))} · ${c.revisar?'revisar si está desarrollado para pasar con '+esc(c.a.nombre):'pasa de '+esc(c.de.nombre)+' a '+esc(c.a.nombre)} (${fdate(c.due)})</div></div>${ops?`<button class="btn sm" data-act="pasarGrupo" data-id="${esc(a.id)}">Pasar a ${esc(c.a.nombre)}</button>`:''}</div>`).join('')}</div></div>`);
+  const sn=animals().map(a=>({a,l:sinLeche(a)})).filter(x=>x.l).sort((x,y)=>x.l.dias-y.l.dias);
+  if(sn.length)out.push(`<div style="margin-bottom:14px"><h2 style="margin:0 0 8px">Terneros: dejar de darles leche</h2><div class="list">${sn.map(({a,l})=>`<button class="item click" data-act="animal" data-id="${esc(a.id)}"><div class="item-main"><div class="t">${esc(a.nombre)} #${esc(a.numero)} ${pill(l.dias<=0?'Ya cumplió 3 meses':'En '+l.dias+' días',l.dias<=0?'bad':'warn')}</div><div class="sub">Nació el ${fdate(a.nacimiento)} · a los 3 meses ya no se le da leche (${fdate(l.due)})</div></div></button>`).join('')}</div></div>`);
+  const pa=animals().filter(a=>a.tipo==='Vaca'&&!isOrd(a)).map(a=>({a,r:reproEstado(a)})).filter(x=>x.r&&x.r.k==='parto'&&x.r.dEntra>=-30&&x.r.dEntra<=8).sort((x,y)=>x.r.dEntra-y.r.dEntra);
+  if(pa.length)out.push(`<div style="margin-bottom:14px"><h2 style="margin:0 0 8px">Recién paridas: entran al ordeño</h2><div class="list">${pa.map(({a,r})=>`<div class="item"><div class="item-main"><div class="t">${esc(a.nombre)} #${esc(a.numero)} ${pill(r.dEntra<=0?'Ya toca':'En '+r.dEntra+' días',r.dEntra<=0?'bad':'warn')}</div><div class="sub">Parió el ${fdate(r.fecha)} · entra al ordeño el ${fdate(r.entra)} (8 días, calostro)</div></div>${ops&&r.dEntra<=0?`<button class="btn sm" data-act="pasarOrdeno" data-id="${esc(a.id)}">Pasar al ordeño</button>`:''}</div>`).join('')}</div></div>`);
   const pr=animals().map(a=>({a,r:reproEstado(a)})).filter(x=>x.r&&(x.r.k==='prenez'||x.r.k==='servida')).sort((x,y)=>x.r.parto<y.r.parto?-1:1).slice(0,8);
   if(pr.length)out.push(`<div style="margin-bottom:14px"><h2 style="margin:0 0 8px">Preñadas y partos probables</h2><div class="list">${pr.map(({a,r})=>`<button class="item click" data-act="animal" data-id="${esc(a.id)}"><div class="item-main"><div class="t">${esc(a.nombre)} #${esc(a.numero)} ${pill(r.k==='prenez'?'Preñada':'Por confirmar',r.cls)}</div><div class="sub">Parto probable ${fdatey(r.parto)} · ${r.dias>=0?'en '+r.dias+' días':'pasó hace '+(-r.dias)+' días'}</div></div></button>`).join('')}</div></div>`);
   return out.join('');
@@ -1764,18 +1815,30 @@ Object.assign(FORMS,{
     const body={animalId:f.dataset.id,tipo:d.tipo,fecha:d.fecha,nota:d.nota||''};
     if(d.tipo==='celo'){body.servida=!!new FormData(f).get('servida');body.toro=d.toro||''}
     if(d.tipo==='prenez'){body.base=d.base||d.fecha;body.toro=d.toro||''}
-    if(d.tipo==='parto')body.criaId=d.criaId||'';
+    if(d.tipo==='parto'){body.criaId=d.criaId||'';
+      if(new FormData(f).get('nuevaCria')){const m0=T('Animales').find(x=>x.id===f.dataset.id),gN=T('Grupos').find(g=>g.activo!==false&&/reci|nacid/i.test(g.nombre))||T('Grupos').find(g=>g.activo!==false&&/ternero/i.test(g.nombre)),ult=reprosDe(m0).filter(r=>r.toro).pop();
+        const cr=await add('Animales',{nombre:(d.criaNombre||'').trim()||('Cría de '+m0.nombre),tipo:'Ternero',sexo:d.criaSexo||'',grupoId:gN?gN.id:'',grupoDesde:d.fecha,fechaIngreso:d.fecha,nacimiento:d.fecha,nacEstimado:false,madreId:m0.id,padreTexto:ult?ult.toro:'',activo:true});body.criaId=cr.id}}
     await add('Reproduccion',body);await recargarAnimales();
     const a=T('Animales').find(x=>x.id===f.dataset.id),r=reproEstado(a);
     closeSheet();render();animalSheet(a.id);
-    toast(r&&(r.k==='prenez'||r.k==='servida')&&a.tipo==='Vaca'&&a.ordenoHasta?`Parto probable ${fdate(r.parto)}. Sale del ordeño el ${fdate(a.ordenoHasta)}.`:'Registrado');
+    toast(r&&r.k==='parto'&&a.tipo==='Vaca'&&!isOrd(a)?`Parida. Entra al ordeño el ${fdate(r.entra)} (8 días después del parto).`:r&&a.tipo==='Vaca'&&a.ordenoHasta&&['prenez','servida','celo'].includes(r.k)?(r.parto?`Parto probable ${fdate(r.parto)}. `:'')+`Sale del ordeño el ${fdate(a.ordenoHasta)}.`:'Registrado');
   },
-  async reglas(d){
-    for(const g of T('Grupos')){
-      const m=String(d['m_'+g.id]||'').trim(),s=d['s_'+g.id]||'';
-      if((String(g.mesesMax||'')!==m)||((g.siguienteId||'')!==s))await upd('Grupos',g.id,{mesesMax:m===''?'':Number(m),siguienteId:s});
+  async reglas(d,f){
+    const fd=new FormData(f),all=T('Grupos');
+    for(const g of all){
+      const nombre=String(d['n_'+g.id]||'').trim();if(!nombre)throw {mensaje:'Cada grupo necesita un nombre.'};
+      const act=!!fd.get('a_'+g.id);
+      if(g.activo!==false&&!act&&animals().some(a=>a.grupoId===g.id))throw {mensaje:`El grupo ${g.nombre} todavía tiene animales. Páselos a otro grupo antes de dejarlo sin uso.`};
+      const m=String(d['m_'+g.id]||'').trim(),sg=d['s_'+g.id]||'',ch={};
+      if(nombre!==g.nombre)ch.nombre=nombre;
+      if(act!==(g.activo!==false))ch.activo=act;
+      if(String(g.mesesMax||'')!==m)ch.mesesMax=m===''?'':Number(m);
+      if((g.siguienteId||'')!==sg)ch.siguienteId=sg;
+      if(Object.keys(ch).length)await upd('Grupos',g.id,ch);
     }
-    closeSheet();render();toast('Reglas de edad guardadas');
+    const nn=String(d.nuevoNombre||'').trim();
+    if(nn){if(all.some(x=>String(x.nombre).toLowerCase()===nn.toLowerCase()))throw {mensaje:'Ya existe un grupo con ese nombre.'};await add('Grupos',{nombre:nn,activo:true})}
+    closeSheet();render();toast('Grupos guardados');
   },
   async pedResp(d,f){
     const p=T('Pedidos').find(x=>x.id===f.dataset.id),ch={estado:d.estado,respuesta:d.respuesta||'',comprado:d.comprado||''};
@@ -1796,23 +1859,45 @@ Object.assign(ACTS,{
   entSheet:el=>entSheet(el.dataset.m,el.dataset.id),
   fperfil:el=>act(async()=>{const r=await api('fotoPerfil',{id:el.dataset.id});T('Fotos').forEach(q=>{if(q.modulo===r.fila.modulo&&q.refId===r.fila.refId)q.perfil=false});upsert('Fotos',r.fila);const fn=S.sheetFn;render();if(fn)fn();toast('Foto de perfil actualizada')}),
   perfilNueva:el=>openSheet(formWrap('Foto de perfil','perfilNueva',fotoField('f-pn',1,'Foto de perfil'),'','Guardar foto de perfil').replace('<form data-form="perfilNueva" >','<form data-form="perfilNueva" data-m="'+el.dataset.m+'" data-r="'+esc(el.dataset.r)+'">')),
-  addFotos:el=>openSheet(sheetTop('Agregar fotos')+`<form data-form="fotosAdd" data-m="${el.dataset.m}" data-r="${esc(el.dataset.r)}">${fotoField('f-af')}<div class="field"><label for="f-afd">Descripción (opcional)</label><input id="f-afd" name="desc" maxlength="100"></div>${PERFIL_PUEDE[el.dataset.m]&&PERFIL_PUEDE[el.dataset.m]()?'<div class="checks" style="margin-bottom:12px"><label for="f-afp"><input id="f-afp" type="checkbox" name="usarPerfil">Usar la primera foto como foto de perfil</label></div>':''}<button class="btn" type="submit">Guardar fotos</button></form>`),
+  addFotos:el=>{const m=el.dataset.m,r=el.dataset.r,free=MAXG-T('Fotos').filter(f=>f.modulo===m&&f.refId===r).length;if(free<=0){toast('Ya tiene '+MAXG+' fotos. Un administrador puede eliminar algunas para subir más.',true);return}
+    openSheet(sheetTop('Agregar fotos')+`<form data-form="fotosAdd" data-m="${m}" data-r="${esc(r)}">${fotoField('f-af',Math.min(10,free),'Fotos')}<div class="field"><label for="f-afd">Descripción (opcional)</label><input id="f-afd" name="desc" maxlength="100"></div>${PERFIL_PUEDE[m]&&PERFIL_PUEDE[m]()?'<div class="checks" style="margin-bottom:12px"><label for="f-afp"><input id="f-afp" type="checkbox" name="usarPerfil">Usar la primera foto como foto de perfil</label></div>':''}<button class="btn" type="submit">Guardar fotos</button></form>`)},
+  camara:el=>camOpen(document.getElementById(el.dataset.w)),
+  camFoto:()=>camShot(),
+  camCerrar:()=>camClose(),
+  camCambiar:()=>{if(CAM){CAM.face=CAM.face==='environment'?'user':'environment';camStart()}},
+  camNativa:()=>{const w=CAM&&CAM.w;camClose();if(w){const c=document.getElementById(w.id+'-c1');if(c)c.click()}},
+  fquitar:el=>{const w=document.getElementById(el.dataset.w);if(w&&w._f){w._f.splice(+el.dataset.i,1);gDraw(w)}},
+  galMas:el=>{S.galN=S.galN||{};S.galN[el.dataset.k]=((S.galN[el.dataset.k])||12)+12;refreshSheet()},
+  fdel:el=>{if(!confirm('¿Eliminar esta foto? No se puede deshacer.'))return;act(async()=>{await api('fotoEliminar',{id:el.dataset.id});S.d.Fotos=T('Fotos').filter(f=>f.id!==el.dataset.id);const fn=S.sheetFn;render();if(fn)fn();toast('Foto eliminada')})},
+  lbz:el=>{const d=$('#lb');if(d&&d._zoom)d._zoom(+el.dataset.d)},
   newVeh:()=>openSheet(formWrap('Nuevo vehículo','veh',vehFields(null))),
   editVeh:el=>{const v=T('Vehiculos').find(x=>x.id===el.dataset.id);openSheet(formWrap('Vehículo: '+esc(v.nombre),'veh',vehFields(v),v.id))},
   newEquipo:()=>openSheet(formWrap('Nuevo equipo','newEquipo',equipoFields(null))),
   editEquipo:el=>{const e=T('Equipos').find(x=>x.id===el.dataset.id);openSheet(formWrap('Editar '+esc(e.nombre),'editEquipo',equipoFields(e),e.id))},
   vacasTodas:el=>{const bx=[...el.closest('form').querySelectorAll('input[name=vaca]')],all=bx.every(b=>b.checked);bx.forEach(b=>{b.checked=!all})},
   pasarGrupo:el=>act(async()=>{const a=T('Animales').find(x=>x.id===el.dataset.id),c=cambioGrupo(a);if(!c)return;await upd('Animales',a.id,{grupoId:c.a.id,grupoDesde:today()});await hist(a.id,'Pasó al grupo '+c.a.nombre+' por su edad');render();toast(a.nombre+' pasó a '+c.a.nombre)}),
-  reglasEdad:()=>openSheet(formWrap('Reglas de edad por grupo','reglas',`<p class="muted" style="margin:0 0 12px;font-size:14px">Ejemplo: Chivitos pasan a Chivos a los 6 meses; Chivos pasan a Vacas a los 15 meses. Deje vacío el grupo que no cambia por edad. Solo se avisa: el cambio lo confirma una persona.</p>${T('Grupos').filter(g=>g.activo!==false).map(g=>`<div class="row2"><div class="field"><label for="m-${esc(g.id)}">${esc(g.nombre)}: meses</label><input id="m-${esc(g.id)}" name="m_${esc(g.id)}" type="number" min="1" max="600" value="${g.mesesMax||''}"></div><div class="field"><label for="s-${esc(g.id)}">Pasa a</label><select id="s-${esc(g.id)}" name="s_${esc(g.id)}"><option value="">Ninguno</option>${opts(T('Grupos').filter(x=>x.activo!==false&&x.id!==g.id).map(x=>[x.id,x.nombre]),g.siguienteId)}</select></div></div>`).join('')}`)),
+  reglasEdad:()=>{const gs=T('Grupos'),on=g=>g.activo!==false;
+    openSheet(formWrap('Grupos de ganado','reglas',`<p class="muted" style="margin:0 0 12px;font-size:14px">Aquí cambia el nombre de los grupos, los activa o desactiva y fija a qué edad pasan al grupo siguiente. Solo se avisa: el cambio lo confirma una persona. Ejemplo: Recién nacidos pasan a Terneros al mes (para revisar si ya están desarrollados).</p>
+    <button class="btn sm alt" type="button" data-act="gruposBase" style="margin-bottom:12px">Preparar grupos: Vacas en ordeño, Vacas de orro, Terneros y Recién nacidos</button>
+    ${gs.map(g=>`<div class="card" style="padding:10px;margin-bottom:10px"><div class="field"><label for="n-${esc(g.id)}">Nombre del grupo</label><input id="n-${esc(g.id)}" name="n_${esc(g.id)}" maxlength="60" value="${esc(g.nombre)}"></div><div class="row2"><div class="field"><label for="m-${esc(g.id)}">Pasa al siguiente a los (meses)</label><input id="m-${esc(g.id)}" name="m_${esc(g.id)}" type="number" min="1" max="600" value="${g.mesesMax||''}"></div><div class="field"><label for="s-${esc(g.id)}">Pasa a</label><select id="s-${esc(g.id)}" name="s_${esc(g.id)}"><option value="">Ninguno</option>${opts(gs.filter(x=>on(x)&&x.id!==g.id).map(x=>[x.id,x.nombre]),g.siguienteId)}</select></div></div><div class="checks"><label for="a-${esc(g.id)}"><input id="a-${esc(g.id)}" type="checkbox" name="a_${esc(g.id)}" ${on(g)?'checked':''}>Grupo en uso (${animals().filter(a=>a.grupoId===g.id).length} animales)</label></div></div>`).join('')}
+    <div class="field"><label for="n-nuevo">Agregar un grupo nuevo</label><input id="n-nuevo" name="nuevoNombre" maxlength="60" placeholder="Nombre del grupo nuevo"></div>`))},
+  pasarOrdeno:el=>act(async()=>{const a=T('Animales').find(x=>x.id===el.dataset.id),g=grpOrd();if(!g)throw {mensaje:'No existe el grupo de vacas en ordeño.'};await upd('Animales',a.id,{grupoId:g.id,grupoDesde:today(),ordenoDesde:today(),ordenoHasta:''});await hist(a.id,'Pasó al ordeño a los 8 días del parto');const fn=S.sheetFn;render();if(fn)fn();toast(a.nombre+' pasó al ordeño')}),
+  gruposBase:()=>act(async()=>{
+    const quiere=[['Vacas en ordeño',/orde/i],['Vacas de orro',/orro|horr|seca/i],['Terneros',/ternero/i],['Recién nacidos',/reci|nacid/i]],ids={};
+    for(const [n,re] of quiere){let g=T('Grupos').find(x=>x.activo!==false&&re.test(x.nombre));if(!g)g=await add('Grupos',{nombre:n,activo:true});ids[n]=g.id}
+    const rn=T('Grupos').find(x=>x.id===ids['Recién nacidos']);if(rn&&!rn.mesesMax)await upd('Grupos',rn.id,{mesesMax:1,siguienteId:ids['Terneros']});
+    const fn=S.sheetFn;closeSheet();render();ACTS.reglasEdad();toast('Grupos preparados. Revise los nombres y desactive los que no use.')}),
   newRepro:el=>{const a=T('Animales').find(x=>x.id===el.dataset.id),sinVin=criasDe(a).filter(c=>!reprosDe(a).some(r=>r.criaId===c.id));
     openSheet(formWrap('Reproducción de '+esc(a.nombre),'repro',`<div class="field"><label for="f-rt2">Qué se registra</label><select id="f-rt2" name="tipo">${opts([['celo','Celo'],['prenez','Preñez confirmada'],['parto','Parto'],['aborto','Aborto']])}</select></div>
     <div class="field"><label for="f-rf">Fecha</label><input id="f-rf" name="fecha" type="date" value="${today()}" max="${today()}" required></div>
     <div class="rp rp-celo"><div class="checks" style="margin-bottom:12px"><label for="f-rs"><input id="f-rs" type="checkbox" name="servida">Se le dio servicio (monta o inseminación)</label></div></div>
     <div class="rp rp-celo rp-prenez"><div class="field"><label for="f-rto">Toro o semen</label><input id="f-rto" name="toro" maxlength="80" list="dl-toros"><datalist id="dl-toros">${T('Animales').filter(x=>x.tipo==='Toro'||x.tipo==='Novillo').map(x=>`<option value="${esc(x.nombre)}">`).join('')}</datalist></div></div>
     <div class="rp rp-prenez"><div class="field"><label for="f-rb">Fecha del servicio</label><input id="f-rb" name="base" type="date" max="${today()}"><small>Si no se sabe, se usa la fecha de hoy. El parto se calcula desde el servicio.</small></div></div>
-    <div class="rp rp-parto"><div class="field"><label for="f-rc">Cría</label><select id="f-rc" name="criaId"><option value="">Aún no registrada</option>${opts(sinVin.map(c=>[c.id,c.nombre+' #'+c.numero]))}</select></div></div>
+    <div class="rp rp-parto"><div class="field"><label for="f-rc">Cría</label><select id="f-rc" name="criaId"><option value="">Aún no registrada</option>${opts(sinVin.map(c=>[c.id,c.nombre+' #'+c.numero]))}</select></div>
+    <div class="checks" style="margin-bottom:12px"><label for="f-rnc"><input id="f-rnc" type="checkbox" name="nuevaCria">Registrar la cría ahora (queda en Recién nacidos, con número automático)</label></div>
+    <div class="row2"><div class="field"><label for="f-rcn">Nombre de la cría</label><input id="f-rcn" name="criaNombre" maxlength="60" placeholder="Si ya tiene"></div><div class="field"><label for="f-rcs">Sexo</label><select id="f-rcs" name="criaSexo"><option value="">No indicar</option><option value="H">Hembra</option><option value="M">Macho</option></select></div></div></div>
     <div class="field"><label for="f-rn">Nota</label><textarea id="f-rn" name="nota" maxlength="300"></textarea></div>
-    <div class="hint">Al servir o confirmar la preñez de una vaca se programa su salida del ordeño a los 7 meses.</div>`,a.id,'Guardar'));
+    <div class="hint">Al registrar un celo se programa la salida del ordeño 7 meses después del celo; la cuenta no sale del parto. Después de parir, la vaca entra al ordeño a los 8 días (calostro) y la app avisa.</div>`,a.id,'Guardar'));
     reproToggle($('#panel form'))},
   reproAnular:el=>act(async()=>{const r=await upd('Reproduccion',el.dataset.id,{anulado:true});await recargarAnimales();const fn=S.sheetFn;render();if(fn)fn();toast('Registro anulado')})
 });
@@ -1829,6 +1914,15 @@ Object.assign(ACTS,{
     <div class="field"><label for="f-pr">Respuesta</label><textarea id="f-pr" name="respuesta" maxlength="300">${esc(p.respuesta)}</textarea></div>
     ${adm?`<div class="field"><label for="f-pc">Costo total ($)</label><input id="f-pc" name="costo" type="number" min="0" step="0.01" value="${p.costo===''||p.costo==null?'':p.costo}"><small>Solo los administradores ven el costo.</small></div>`:''}`,p.id))}
 });
+
+/* Botón Atrás del teléfono: cierra la capa abierta (foto, cámara, ventana) en vez de salir de la app */
+const LY={m:false,skip:0};
+const capaAbierta=()=>!!(document.getElementById('cam')||document.getElementById('lb')||(document.getElementById('rep')&&!document.getElementById('rep').hidden)||(document.getElementById('sheet')&&!document.getElementById('sheet').hidden));
+function lySync(){setTimeout(()=>{const n=capaAbierta();if(n&&!LY.m){try{history.pushState({corral:1},'')}catch(e){}LY.m=true}else if(!n&&LY.m){LY.m=false;LY.skip++;try{history.back()}catch(e){LY.skip=0}}},0)}
+function cerrarCapa(){if(document.getElementById('cam'))camClose();else if(document.getElementById('lb'))document.getElementById('lb').remove();else if(document.getElementById('rep')&&!document.getElementById('rep').hidden)ACTS.repClose();else if(!document.getElementById('sheet').hidden)closeSheet()}
+window.addEventListener('popstate',()=>{if(LY.skip>0){LY.skip--;return}if(LY.m){LY.m=false;cerrarCapa();lySync()}});
+try{if(history.state&&history.state.corral)history.replaceState(null,'')}catch(e){}
+{const mo=new MutationObserver(lySync);mo.observe(document.body,{childList:true});const a=document.getElementById('sheet'),b=document.getElementById('rep');if(a)mo.observe(a,{attributes:true,attributeFilter:['hidden']});if(b)mo.observe(b,{attributes:true,attributeFilter:['hidden']})}
 
 /* ───────── Arranque ───────── */
 (async function init(){
